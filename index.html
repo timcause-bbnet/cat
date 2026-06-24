@@ -1,0 +1,1420 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>抽獎紀錄系統</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=Noto+Sans+TC:wght@300;400;500&display=swap');
+
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f7f4ef;
+  --bg2:#fffdf9;
+  --card:#ffffff;
+  --border:#e2dbd0;
+  --border2:#d4cbbc;
+  --accent:#c0392b;
+  --accent2:#8b6f47;
+  --accent3:#5a7a6a;
+  --gold:#b8860b;
+  --text:#2c2416;
+  --text2:#6b5c47;
+  --text3:#9e8c78;
+  --muted:#b0a090;
+  --active-bg:#fff8f0;
+  --active-border:#c0392b;
+  --lucky-bg:#fef9e7;
+  --lucky-border:#d4ac0d;
+  --tag-bg:#f0ebe3;
+  --shadow:0 2px 12px rgba(100,80,50,.08);
+  --shadow2:0 4px 20px rgba(100,80,50,.12);
+}
+body{font-family:'Noto Sans TC',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-weight:400}
+
+/* HEADER */
+#header-section{background:linear-gradient(160deg,#fffdf9 0%,#f5ede0 100%);padding:28px 20px 22px;text-align:center;border-bottom:1px solid var(--border);position:relative}
+#header-section::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--accent2),transparent)}
+#event-title{font-family:'Noto Serif TC',serif;font-size:1.8rem;font-weight:700;letter-spacing:4px;color:var(--text);cursor:pointer;border-bottom:1px dashed transparent;transition:border-color .2s;display:inline-block;padding-bottom:2px}
+#event-title:hover{border-bottom-color:var(--accent2)}
+#title-input{font-family:'Noto Serif TC',serif;font-size:1.7rem;font-weight:700;letter-spacing:3px;background:transparent;border:none;border-bottom:2px solid var(--accent2);color:var(--text);text-align:center;width:100%;outline:none;display:none}
+#event-subtitle{color:var(--text3);font-size:.8rem;letter-spacing:3px;margin-top:5px}
+#cover-img{max-height:160px;max-width:100%;margin-top:14px;border-radius:8px;border:1px solid var(--border);display:none;box-shadow:var(--shadow)}
+#img-upload-btn{margin-top:10px;padding:5px 14px;background:transparent;color:var(--accent2);border:1px solid var(--accent2);border-radius:20px;cursor:pointer;font-size:.78rem;letter-spacing:1px}
+#img-upload-btn:hover{background:var(--accent2);color:#fff}
+#img-upload-input{display:none}
+
+/* SECTION */
+.section{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 16px;margin:14px 16px;box-shadow:var(--shadow)}
+.section-title{font-family:'Noto Serif TC',serif;font-size:.85rem;font-weight:600;letter-spacing:3px;color:var(--accent2);margin-bottom:14px;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+.section-title::before{content:'';width:3px;height:16px;background:var(--accent2);border-radius:2px;display:inline-block}
+
+/* MODE BTN */
+.mode-btn{padding:5px 16px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;font-size:.8rem;transition:all .2s;letter-spacing:1px}
+.mode-btn.active{background:var(--accent2);border-color:var(--accent2);color:#fff}
+
+/* INPUTS */
+input[type=text],input[type=number],select,textarea{
+  padding:6px 10px;border-radius:7px;border:1px solid var(--border);background:var(--bg2);
+  color:var(--text);font-size:.85rem;font-family:'Noto Sans TC',sans-serif;outline:none;
+  transition:border-color .2s;
+}
+input:focus,select:focus{border-color:var(--accent2)}
+
+/* PRIZE DEFS */
+.setup-hint{color:var(--text3);font-size:.78rem;margin-bottom:10px;line-height:1.6}
+#prize-def-list{display:flex;flex-direction:column;gap:7px;margin-bottom:12px}
+.prize-def-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:8px 10px;background:var(--bg);border-radius:8px;border:1px solid var(--border)}
+.prize-def-letter{min-width:22px;font-weight:600;color:var(--accent2);font-size:.9rem}
+.prize-def-name{flex:1;min-width:90px}
+.prize-def-qty{width:56px;text-align:center}
+.prize-def-img-btn{padding:4px 10px;background:transparent;border:1px solid var(--accent3);color:var(--accent3);border-radius:6px;cursor:pointer;font-size:.73rem;white-space:nowrap}
+.prize-def-img-thumb{width:30px;height:30px;object-fit:cover;border-radius:4px;border:1px solid var(--border)}
+.prize-def-del{padding:4px 8px;background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:6px;cursor:pointer;font-size:.75rem}
+.prize-def-del:hover{border-color:var(--accent);color:var(--accent)}
+.prize-img-input{display:none}
+.btn-ghost{padding:5px 14px;background:transparent;border:1px solid var(--accent3);color:var(--accent3);border-radius:8px;cursor:pointer;font-size:.8rem;margin-right:8px}
+.btn-ghost:hover{background:var(--accent3);color:#fff}
+.btn-primary{padding:5px 14px;background:var(--accent3);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:.8rem}
+.btn-primary:hover{opacity:.85}
+
+/* NUM PRIZE DEFS */
+#num-prize-def-list{display:flex;flex-direction:column;gap:7px;margin-bottom:12px}
+.num-prize-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:8px 10px;background:var(--bg);border-radius:8px;border:1px solid var(--border)}
+.num-prize-row-label{min-width:20px;font-weight:600;color:var(--accent2);font-size:.88rem}
+.num-range-from,.num-range-to{width:56px;text-align:center}
+.num-prize-name-inp{flex:1;min-width:80px}
+.range-sep{color:var(--muted);font-size:.85rem}
+
+/* MAGIC SETTING */
+.magic-setting{margin-top:14px;padding:12px 14px;background:var(--lucky-bg);border-radius:10px;border:1px solid var(--lucky-border);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.magic-setting label{color:var(--gold);font-size:.82rem;font-weight:600}
+.magic-setting input{width:64px;text-align:center;font-weight:600;border-color:var(--lucky-border)}
+.magic-setting button{padding:5px 12px;background:var(--gold);color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:.78rem;font-weight:600}
+#lucky-magic-display{color:var(--gold);font-weight:700;font-size:.85rem}
+
+/* POOL */
+#prize-pool-display{display:none;margin-top:14px;border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.pool-header{display:grid;grid-template-columns:1fr auto;padding:6px 12px;font-size:.72rem;color:var(--muted);background:var(--bg);border-bottom:1px solid var(--border);letter-spacing:1px}
+.pool-row{display:grid;grid-template-columns:1fr auto;align-items:center;padding:9px 12px;border-bottom:1px solid var(--border)}
+.pool-row:last-child{border-bottom:none}
+.pool-row-name{font-size:.85rem;color:var(--text)}
+.prize-letter{color:var(--accent2);font-weight:600;margin-right:8px}
+.pool-row-count{font-size:.88rem;font-weight:600;color:var(--accent3)}
+.pool-row-count.exhausted{color:var(--muted)}
+.pool-total-row{display:grid;grid-template-columns:1fr auto;padding:9px 12px;background:var(--bg);border-top:1px solid var(--border2)}
+.pool-total-row span:first-child{font-weight:600;font-size:.85rem}
+.pool-total-row span:last-child{font-weight:700;color:var(--accent);font-size:.88rem}
+
+/* CAL */
+.cal-hint{color:var(--text3);font-size:.75rem;margin-bottom:6px}
+.cal-grid-wrap{display:flex;flex-wrap:wrap;gap:4px;max-width:100%}
+.cal-cell{width:38px;height:30px;border-radius:6px;background:var(--bg);border:1px solid var(--border);color:var(--text2);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:.75rem;transition:all .15s;user-select:none}
+.cal-cell:hover{background:var(--tag-bg);border-color:var(--accent2)}
+.cal-cell.cal-start{background:var(--accent);border-color:var(--accent);color:#fff}
+.cal-cell.cal-end{background:var(--accent3);border-color:var(--accent3);color:#fff}
+.cal-cell.cal-range{background:#f0ede8;color:var(--accent2);border-color:var(--border2)}
+.cal-legend{display:flex;gap:12px;margin-top:6px;font-size:.72rem;color:var(--text2)}
+.legend-dot{width:10px;height:10px;border-radius:3px;display:inline-block;margin-right:3px;vertical-align:middle}
+
+/* PARTICIPANTS */
+.participant-input-row{display:flex;gap:8px;margin-bottom:12px}
+#participant-input{flex:1}
+#add-participant-btn{padding:6px 16px;background:var(--accent2);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:.85rem}
+#participant-list{display:flex;flex-wrap:wrap;gap:7px}
+.p-tag{padding:4px 14px;border-radius:20px;background:var(--tag-bg);color:var(--accent2);font-size:.82rem;border:1px solid var(--border);transition:all .3s}
+.p-tag.used{background:#f5f5f5;color:var(--muted);border-color:var(--border)}
+.p-tag .remove-p{margin-left:6px;cursor:pointer;color:var(--accent);font-weight:bold;font-size:.85rem}
+.p-tag.used .remove-p{pointer-events:none;color:var(--border)}
+
+/* RECORD CARD */
+.record-card{background:var(--card);border:1px solid var(--border);border-radius:10px;margin-bottom:12px;overflow:hidden;box-shadow:var(--shadow)}
+.record-card.active-card{border-color:var(--accent);box-shadow:0 0 0 2px rgba(192,57,43,.1),var(--shadow2)}
+.record-card.active-lucky-card{border-color:var(--gold);box-shadow:0 0 0 2px rgba(184,134,11,.12),var(--shadow2)}
+.record-header{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--bg);border-bottom:1px solid var(--border);flex-wrap:wrap}
+.record-header select{max-width:130px}
+.record-header input[type=number]{width:56px;text-align:center}
+.hdr-label{color:var(--muted);font-size:.75rem}
+.del-row-btn{padding:3px 10px;background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:6px;cursor:pointer;font-size:.75rem;margin-left:auto}
+.del-row-btn:hover{border-color:var(--accent);color:var(--accent)}
+.alpha-locked-tag{color:var(--accent3);font-size:.78rem;font-weight:600;margin-left:auto}
+
+/* RESULTS */
+.result-section{padding:10px 14px 4px}
+.sec-label{color:var(--muted);font-size:.7rem;margin-bottom:5px;letter-spacing:1.5px;text-transform:uppercase}
+.result-boxes{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:5px}
+.result-box{min-width:48px;padding:4px 6px;border-radius:6px;background:var(--tag-bg);border:1px solid var(--border);text-align:center}
+.result-box select{background:transparent;border:none;color:var(--text);font-size:.8rem;padding:0;outline:none;width:100%;cursor:pointer;font-family:'Noto Sans TC',sans-serif}
+.result-summary{padding:0 14px 10px}
+.sum-row{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:5px}
+.sum-chip{padding:3px 12px;border-radius:14px;background:var(--tag-bg);border:1px solid var(--border2);font-size:.78rem;color:var(--text2)}
+.sum-chip .sc-letter{color:var(--accent2);font-weight:600;margin-right:3px}
+.view-prize-btn{padding:3px 12px;background:var(--gold);color:#fff;border:none;border-radius:14px;cursor:pointer;font-size:.75rem;font-weight:600}
+.claim-btn{padding:3px 12px;border-radius:14px;cursor:pointer;font-size:.75rem;font-weight:600;border:1px solid var(--border2);background:var(--bg);color:var(--text2);transition:all .2s}
+.claim-btn.claimed{background:var(--accent3);color:#fff;border-color:var(--accent3)}
+.modal-claim-btn{width:100%;padding:8px;border-radius:8px;cursor:pointer;font-size:.85rem;font-weight:600;border:1.5px solid var(--border2);background:var(--bg);color:var(--text2);transition:all .2s;margin-top:4px}
+.modal-claim-btn.claimed{background:var(--accent3);color:#fff;border-color:var(--accent3)}
+
+/* LUCKY ALSO (in round1) */
+.lucky-also{padding:7px 14px 10px;border-top:1px solid var(--border);background:var(--lucky-bg)}
+.lucky-also .la-label{color:var(--gold);font-size:.7rem;font-weight:600;letter-spacing:1px;margin-bottom:5px}
+.lucky-nums-display{display:flex;flex-wrap:wrap;gap:5px}
+.lucky-chip{padding:3px 12px;border-radius:12px;font-size:.8rem;font-weight:600}
+.lucky-chip.normal{background:#eaf0f0;color:var(--accent3);border:1px solid #c8ddd8}
+.lucky-chip.magic-chip{background:var(--gold);color:#fff}
+
+/* NEXT BTN */
+.alpha-next-row{padding:8px 14px 10px;display:flex;align-items:center;gap:10px}
+.next-alpha-btn{padding:6px 20px;background:var(--accent);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:.82rem;font-weight:600;letter-spacing:1px}
+.next-alpha-btn:hover{opacity:.85}
+
+/* ROUND 2 */
+.lucky-section{padding:10px 14px 12px;border-top:1px solid var(--border)}
+.lucky-grid{display:flex;flex-wrap:wrap;gap:4px;max-width:100%;margin-top:6px}
+.lc{width:38px;height:30px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:500;user-select:none;transition:all .12s;border:1px solid transparent}
+.lc.avail{background:var(--bg);border-color:var(--border);color:var(--text2);cursor:pointer}
+.lc.avail:hover{background:var(--tag-bg);border-color:var(--accent2);color:var(--accent2)}
+.lc.mine{background:var(--accent);border-color:var(--accent);color:#fff;cursor:pointer}
+.lc.gone{background:#f5f5f5;border-color:var(--border);color:#ccc;cursor:not-allowed}
+.lc.magic-avail{background:var(--lucky-bg);border-color:var(--gold);color:var(--gold);cursor:pointer;font-weight:700}
+.lc.magic-avail:hover{background:#fdebd0}
+.lc.magic-mine{background:var(--gold);border-color:var(--gold);color:#fff;cursor:pointer;font-weight:700;animation:pulse .7s infinite alternate}
+@keyframes pulse{from{box-shadow:0 0 0 0 rgba(184,134,11,.4)}to{box-shadow:0 0 0 6px rgba(184,134,11,0)}}
+.lucky-confirm-row{margin-top:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.lucky-progress{color:var(--accent3);font-size:.8rem;font-weight:600}
+.next-lucky-btn{padding:6px 20px;background:var(--accent3);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:.82rem;font-weight:600}
+.next-lucky-btn:hover{opacity:.85}
+.waiting-label{color:var(--muted);font-size:.78rem;padding:4px 0}
+
+/* PRIZE MODAL */
+#prize-modal{display:none;position:fixed;inset:0;background:rgba(44,36,22,.6);z-index:1000;overflow-y:auto;padding:20px;backdrop-filter:blur(3px)}
+#prize-modal-inner{background:var(--card);border-radius:14px;max-width:440px;margin:0 auto;padding:20px;border:1px solid var(--border);box-shadow:var(--shadow2);max-height:85vh;display:flex;flex-direction:column}
+#prize-modal-title{font-family:'Noto Serif TC',serif;font-size:.95rem;font-weight:700;color:var(--accent2);margin-bottom:14px;letter-spacing:2px;flex-shrink:0}
+#prize-modal-body{overflow-y:auto;flex:1}
+#prize-modal-close{float:right;background:transparent;border:none;color:var(--muted);font-size:1.3rem;cursor:pointer;line-height:1;margin-top:-2px}
+#prize-modal-close:hover{color:var(--text)}
+.modal-prize-item{display:flex;flex-direction:column;gap:6px;padding:12px 0;border-bottom:1px solid var(--border)}
+.modal-prize-item:last-child{border-bottom:none}
+.modal-prize-img{width:100%;max-width:280px;height:auto;max-height:220px;object-fit:contain;border-radius:8px;border:1px solid var(--border);display:block;margin-bottom:6px}
+.modal-prize-img.no-img{width:80px;height:80px;display:flex;align-items:center;justify-content:center;background:var(--bg);color:var(--muted);font-size:.72rem;border-radius:8px;border:1px solid var(--border);flex-shrink:0}
+.modal-prize-letter{color:var(--accent2);font-weight:700;font-size:.95rem}
+.modal-prize-name{color:var(--text2);font-size:.85rem;margin-top:2px}
+.modal-prize-count{color:var(--accent);font-weight:700;font-size:.9rem;margin-top:3px}
+
+/* GAME OVER */
+#game-over-banner{display:none;margin:0 16px 14px;padding:18px 20px;background:linear-gradient(135deg,#fff8f0,#fdebd0);border:1px solid var(--gold);border-radius:12px;text-align:center;box-shadow:var(--shadow)}
+.go-title{font-family:'Noto Serif TC',serif;font-size:1.3rem;font-weight:700;color:var(--gold);letter-spacing:4px;margin-bottom:6px}
+.go-sub{color:var(--text2);font-size:.85rem}
+
+/* EXPORT */
+.export-row{display:flex;gap:10px;flex-wrap:wrap}
+.export-btn{padding:8px 22px;border-radius:8px;border:none;cursor:pointer;font-size:.85rem;font-weight:600;letter-spacing:1px;transition:opacity .2s}
+.export-btn:hover{opacity:.85}
+#export-txt{background:var(--accent3);color:#fff}
+#export-pdf{background:var(--accent);color:#fff}
+
+
+/* FLOATING POOL */
+#float-pool{
+  display:none;position:fixed;bottom:0;left:0;right:0;z-index:900;
+  background:rgba(255,253,249,.97);border-top:1.5px solid var(--border2);
+  box-shadow:0 -4px 20px rgba(100,80,50,.12);
+  max-height:45vh;
+}
+#float-pool-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:8px 16px;background:var(--bg);border-bottom:1px solid var(--border);
+  cursor:pointer;user-select:none;
+}
+#float-pool-header .fph-title{font-size:.8rem;font-weight:600;color:var(--accent2);letter-spacing:1px}
+#float-pool-header .fph-total{font-size:.85rem;font-weight:700;color:var(--accent)}
+#float-pool-header .fph-toggle{font-size:.75rem;color:var(--muted)}
+#float-pool-body{overflow-y:auto;max-height:calc(45vh - 40px);display:none}
+#float-pool-body .pool-row{padding:7px 16px;font-size:.82rem}
+#float-pool-body .pool-row-name{font-size:.82rem}
+#float-pool-body .pool-total-row{padding:7px 16px;font-size:.82rem}
+
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--accent3);color:#fff;padding:7px 22px;border-radius:24px;font-size:.82rem;opacity:0;transition:opacity .3s;pointer-events:none;z-index:999;box-shadow:var(--shadow2)}
+#toast.show{opacity:1}
+
+@media(max-width:480px){
+  .section{padding:13px 11px;margin:10px}
+  .prize-def-row{gap:5px}
+  .prize-def-name{min-width:70px}
+  .record-header select{max-width:100px}
+  .lc{width:33px;height:27px;font-size:.7rem}
+  .modal-prize-img{width:54px;height:54px}
+  .num-prize-row{gap:4px}
+  .num-range-from,.num-range-to{width:46px}
+}
+/* SESSION MANAGER */
+#session-bar{background:var(--bg);border-bottom:1px solid var(--border2);padding:10px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;box-shadow:0 2px 8px rgba(100,80,50,.07)}
+#session-bar .sb-label{font-size:.75rem;color:var(--muted);letter-spacing:1px;white-space:nowrap}
+#session-select{flex:1;min-width:120px;max-width:220px;padding:5px 8px;border-radius:7px;border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-size:.82rem}
+#new-session-btn{padding:5px 14px;background:var(--accent2);color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:.78rem;white-space:nowrap}
+#new-session-btn:hover{opacity:.85}
+#del-session-btn{padding:5px 12px;background:transparent;border:1px solid var(--border2);color:var(--muted);border-radius:7px;cursor:pointer;font-size:.78rem;white-space:nowrap}
+#del-session-btn:hover{border-color:var(--accent);color:var(--accent)}
+#session-name-inp{flex:1;min-width:100px;max-width:200px;padding:5px 8px;border-radius:7px;border:1px solid var(--accent2);background:var(--bg2);color:var(--text);font-size:.82rem;display:none}
+#confirm-session-name-btn{padding:5px 12px;background:var(--accent3);color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:.78rem;display:none}
+.history-badge{background:var(--tag-bg);color:var(--text3);font-size:.7rem;padding:2px 8px;border-radius:10px;border:1px solid var(--border);margin-left:4px}
+</style>
+<!-- Firebase: 動態載入，不阻塞主程式 -->
+<script>
+(function(){
+  var firebaseConfig = {
+    apiKey: "AIzaSyCsQutGiyb1BDQg_AV-L0nGfDXCbq0B2gQ",
+    authDomain: "lottery-system-9fb3d.firebaseapp.com",
+    databaseURL: "https://lottery-system-9fb3d-default-rtdb.firebaseio.com",
+    projectId: "lottery-system-9fb3d",
+    storageBucket: "lottery-system-9fb3d.firebasestorage.app",
+    messagingSenderId: "423081990712",
+    appId: "1:423081990712:web:b24bb40601a7417536e4cd"
+  };
+
+  function loadScript(src, cb){
+    var s = document.createElement('script');
+    s.src = src;
+    s.onload = cb;
+    s.onerror = function(){ console.warn('Firebase SDK 載入失敗（可能是離線環境）'); window._fbReady=false; window.dispatchEvent(new Event('fb-ready')); };
+    document.head.appendChild(s);
+  }
+
+  loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js', function(){
+    loadScript('https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js', function(){
+      try {
+        var app = firebase.initializeApp(firebaseConfig);
+        var db = firebase.database();
+        var dbRef = db.ref('lottery');
+        window._fbSet = function(data){ return dbRef.set(data); };
+        window._fbOnValue = function(cb){
+          dbRef.on('value', function(snap){ var val=snap.val(); if(val) cb(val); });
+        };
+        window._fbReady = true;
+        window.dispatchEvent(new Event('fb-ready'));
+      } catch(e) {
+        console.warn('Firebase 初始化失敗', e);
+        window._fbReady = false;
+        window.dispatchEvent(new Event('fb-ready'));
+      }
+    });
+  });
+})();
+</script>
+
+
+</head>
+<body>
+
+<div id="header-section">
+  <div id="event-title" onclick="editTitle()">點擊輸入活動標題</div>
+  <input id="title-input" type="text" placeholder="輸入活動標題" onblur="saveTitle()" onkeydown="if(event.key==='Enter')saveTitle()">
+  <div id="event-subtitle">抽獎紀錄系統</div>
+  <br><img id="cover-img" src="" alt=""><br>
+  <button id="img-upload-btn" onclick="document.getElementById('img-upload-input').click()">📷 上傳封面圖片</button>
+  <input id="img-upload-input" type="file" accept="image/*" onchange="loadCoverImg(event)">
+</div>
+
+<div id="session-bar">
+  <span class="sb-label">場次</span>
+  <select id="session-select" onchange="switchSession(this.value)"></select>
+  <button id="new-session-btn" onclick="startNewSession()">＋ 新場次</button>
+  <button id="del-session-btn" onclick="deleteSession()">刪除</button>
+  <input id="session-name-inp" type="text" placeholder="場次名稱" onkeydown="if(event.key==='Enter')confirmSessionName()">
+  <button id="confirm-session-name-btn" onclick="confirmSessionName()">確認</button>
+</div>
+
+<div class="section">
+  <div class="section-title">獎項設定</div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+    <button class="mode-btn active" id="btn-alpha" onclick="setMode('alpha')">字母獎項</button>
+    <button class="mode-btn" id="btn-num" onclick="setMode('num')">號碼獎項</button>
+  </div>
+
+  <!-- 字母模式 -->
+  <div id="alpha-setup">
+    <div class="setup-hint">依序新增獎項名稱與數量，可上傳獎項照片，按「確認獎項」生效。</div>
+    <div id="prize-def-list"></div>
+    <button class="btn-ghost" onclick="addPrizeRow()">＋ 新增獎項</button>
+    <button class="btn-primary" onclick="confirmPrizes()">確認獎項</button>
+    <div class="magic-setting" style="margin-top:14px">
+      <label>🌟 第二輪幸運數字（1–80）</label>
+      <input type="number" id="magic-num-input-alpha" min="1" max="80" placeholder="？">
+      <button onclick="setMagicNum('alpha')">設定</button>
+      <span id="lucky-magic-display-alpha"></span>
+    </div>
+    <div id="prize-pool-display">
+      <div class="pool-header"><span>獎項</span><span>剩餘 / 總數</span></div>
+      <div id="pool-rows"></div>
+      <div class="pool-total-row"><span>合計</span><span id="pool-total-count"></span></div>
+    </div>
+  </div>
+
+  <!-- 號碼模式 -->
+  <div id="num-setup" style="display:none">
+    <div class="setup-hint">設定號碼範圍對應的獎項（可單一號碼或區間），按「確認獎項」生效。</div>
+    <div id="num-prize-def-list"></div>
+    <button class="btn-ghost" onclick="addNumPrizeRow()">＋ 新增號碼獎項</button>
+    <button class="btn-primary" onclick="confirmNumPrizes()">確認獎項</button>
+    <div class="magic-setting" style="margin-top:14px">
+      <label>🌟 第二輪幸運數字（1–80）</label>
+      <input type="number" id="magic-num-input-num" min="1" max="80" placeholder="？">
+      <button onclick="setMagicNum('num')">設定</button>
+      <span id="lucky-magic-display-num"></span>
+    </div>
+    <div id="num-pool-display" style="display:none;margin-top:14px;border:1px solid var(--border);border-radius:10px;overflow:hidden">
+      <div class="pool-header"><span>號碼範圍 → 獎項</span><span>剩餘 / 總數</span></div>
+      <div id="num-pool-rows"></div>
+      <div class="pool-total-row"><span>合計</span><span id="num-pool-total"></span></div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">參加名單</div>
+  <div class="participant-input-row">
+    <input id="participant-input" type="text" placeholder="輸入姓名，按 Enter 新增" onkeydown="if(event.key==='Enter')addParticipant()">
+    <button id="add-participant-btn" onclick="addParticipant()">新增</button>
+  </div>
+  <div id="participant-list"></div>
+</div>
+
+<div class="section" id="round1-section" style="display:none">
+  <div class="section-title" id="round1-title">第一輪：字母抽獎</div>
+  <div id="round1-list"></div>
+</div>
+
+<div class="section" id="round2-section" style="display:none">
+  <div class="section-title">第二輪：幸運數字 1–80</div>
+  <div id="round2-list"></div>
+</div>
+
+<div id="game-over-banner">
+  <div class="go-title">🎉 遊戲結束</div>
+  <div class="go-sub" id="go-sub-text"></div>
+</div>
+
+<div class="section">
+  <div class="section-title">匯出</div>
+  <div class="export-row">
+    <button class="export-btn" id="export-txt" onclick="exportTxt()">下載 TXT</button>
+    <button class="export-btn" id="export-pdf" onclick="exportPdf()">下載 PDF</button>
+  </div>
+</div>
+
+<div id="prize-modal">
+  <div id="prize-modal-inner">
+    <button id="prize-modal-close" onclick="closePrizeModal()">✕</button>
+    <div id="prize-modal-title">🏆 獎項一覽</div>
+    <div id="prize-modal-body"></div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<!-- FLOATING POOL -->
+<div id="float-pool">
+  <div id="float-pool-header" onclick="toggleFloatPool()">
+    <span class="fph-title">剩餘獎項</span>
+    <span class="fph-total" id="float-pool-total">──</span>
+    <span class="fph-toggle" id="float-pool-toggle">▲ 展開</span>
+  </div>
+  <div id="float-pool-body">
+    <div class="pool-header" style="padding:5px 16px;font-size:.72rem"><span>獎項</span><span>剩餘 / 總數</span></div>
+    <div id="float-pool-rows"></div>
+    <div class="pool-total-row" style="padding:7px 16px"><span>合計</span><span id="float-pool-total2" style="color:var(--accent);font-weight:700"></span></div>
+  </div>
+</div>
+
+<script>
+// ── 場次管理 ──
+let sessions=[];
+let currentSid=null;
+let sidCounter=0;
+
+function newSessionState(){
+  return {
+    title:'',coverImg:'',mode:'alpha',
+    prizeDefs:[],numPrizeDefs:[],
+    magicNum:null,
+    participants:[],records:[],
+    activeAlphaRid:null,round1Done:false,
+    activeLuckyRid:null,gameOver:false,gameOverRid:null
+  };
+}
+
+let state=newSessionState();
+let pidCounter=0,ridCounter=0;
+
+function save(){
+  const sess=sessions.find(s=>s.sid===currentSid);
+  if(sess) sess.state=JSON.parse(JSON.stringify(state));
+  const payload={sessions,currentSid,sidCounter};
+  // 圖片資料太大，存前先移除 img base64（僅存 meta），本地備份保留完整
+  const payloadNoImg=JSON.parse(JSON.stringify(payload));
+  payloadNoImg.sessions.forEach(s=>{
+    if(s.state.coverImg) s.state.coverImg='[img]';
+    if(s.state.prizeDefs) s.state.prizeDefs.forEach(d=>{if(d.img)d.img='[img]';});
+    if(s.state.numPrizeDefs) s.state.numPrizeDefs.forEach(d=>{if(d.img)d.img='[img]';});
+  });
+  // Firebase 同步（不含圖片，需要網路）
+  if(window._fbSet && window._fbReady===true){
+    try{ window._fbSet(payloadNoImg); }catch(e){ console.warn('Firebase save error',e); }
+  }
+  // localStorage 完整備份（含圖片）
+  try{localStorage.setItem('lottery_v9',JSON.stringify(payload));}catch(e){
+    console.warn('localStorage 寫入失敗（可能被瀏覽器封鎖）',e);
+  }
+  toast('已儲存');
+}
+
+let _fbListening=false;
+function load(){
+  // 先從 localStorage 載入（含圖片）
+  try{
+    const raw=localStorage.getItem('lottery_v9');
+    if(raw){
+      const d=JSON.parse(raw);
+      sessions=d.sessions||[];
+      currentSid=d.currentSid||null;
+      sidCounter=d.sidCounter||0;
+    }
+  }catch(e){
+    console.warn('localStorage 讀取失敗，使用預設狀態', e);
+    sessions=[];
+  }
+  if(!sessions||!sessions.length){
+    const sid=++sidCounter;
+    sessions=[{sid,name:'場次 1',state:newSessionState()}];
+    currentSid=sid;
+  }
+  if(!currentSid) currentSid=sessions[0].sid;
+  loadSession(currentSid);
+
+  // 等 Firebase 就緒後開始監聽
+  function startListen(){
+    if(_fbListening) return;
+    _fbListening=true;
+    window._fbOnValue(remoteData=>{
+      // 合併：遠端資料為主，本地圖片補回
+      const localRaw=localStorage.getItem('lottery_v9');
+      let localData=null;
+      try{if(localRaw)localData=JSON.parse(localRaw);}catch(e){}
+
+      const merged=JSON.parse(JSON.stringify(remoteData));
+      merged.sessions.forEach(rs=>{
+        const ls=localData&&localData.sessions?localData.sessions.find(x=>x.sid===rs.sid):null;
+        // 補回圖片
+        if(ls&&ls.state){
+          if(rs.state.coverImg==='[img]'&&ls.state.coverImg) rs.state.coverImg=ls.state.coverImg;
+          if(rs.state.prizeDefs&&ls.state.prizeDefs){
+            rs.state.prizeDefs.forEach((d,i)=>{if(d.img==='[img]'&&ls.state.prizeDefs[i])d.img=ls.state.prizeDefs[i].img||'';});
+          }
+          if(rs.state.numPrizeDefs&&ls.state.numPrizeDefs){
+            rs.state.numPrizeDefs.forEach((d,i)=>{if(d.img==='[img]'&&ls.state.numPrizeDefs[i])d.img=ls.state.numPrizeDefs[i].img||'';});
+          }
+        }
+      });
+
+      sessions=merged.sessions||sessions;
+      sidCounter=merged.sidCounter||sidCounter;
+      const cur=sessions.find(s=>s.sid===currentSid)||sessions[0];
+      if(cur&&cur.state){
+        state=JSON.parse(JSON.stringify(cur.state));
+        if(!state.participants)state.participants=[];
+        if(!state.records)state.records=[];
+        if(!state.prizeDefs)state.prizeDefs=[];
+        if(!state.numPrizeDefs)state.numPrizeDefs=[];
+        if(state.magicNum===undefined)state.magicNum=null;
+        if(state.activeAlphaRid===undefined)state.activeAlphaRid=null;
+        if(state.activeLuckyRid===undefined)state.activeLuckyRid=null;
+        if(state.round1Done===undefined)state.round1Done=false;
+        if(state.gameOver===undefined)state.gameOver=false;
+        if(state.gameOverRid===undefined)state.gameOverRid=null;
+        state.records.forEach(r=>{
+          if(!r.results)r.results=[];
+          if(!r.luckyNums)r.luckyNums=[];
+          if(r.claimed===undefined)r.claimed=false;
+          if(r.alphaLocked===undefined)r.alphaLocked=false;
+          if(r.luckyLocked===undefined)r.luckyLocked=false;
+        });
+        pidCounter=state.participants.length?Math.max(...state.participants.map(p=>p.id)):0;
+        ridCounter=state.records.length?Math.max(...state.records.map(r=>r.rid)):0;
+      }
+      renderSessionBar();
+      renderAll();
+      updateFloatPool();
+      // 更新本地備份（保留圖片）
+      try{
+        const localFull=localData?JSON.parse(JSON.stringify(localData)):{sessions,currentSid,sidCounter};
+        merged.sessions.forEach(rs=>{
+          const lf=localFull.sessions?localFull.sessions.find(x=>x.sid===rs.sid):null;
+          if(!lf)localFull.sessions.push(rs);
+        });
+        localStorage.setItem('lottery_v9',JSON.stringify(localFull));
+      }catch(e){}
+    });
+  }
+
+  // 輪詢等待 Firebase，最多等 8 秒，不影響主程式運作
+  var _fbWaitCount=0;
+  function tryListen(){
+    if(window._fbReady===true && window._fbSet){
+      startListen();
+    } else if(window._fbReady===false){
+      console.log('離線模式');
+    } else if(_fbWaitCount<16){
+      _fbWaitCount++;
+      setTimeout(tryListen, 500);
+    } else {
+      console.log('Firebase 等待逾時，使用離線模式');
+    }
+  }
+  setTimeout(tryListen, 300);
+}
+
+function loadSession(sid){
+  // 強制確保 sessions 是有效陣列
+  if(!Array.isArray(sessions)||!sessions.length){
+    sidCounter=sidCounter||1;
+    sessions=[{sid:sidCounter,name:'場次 1',state:newSessionState()}];
+    currentSid=sidCounter;
+    sid=sidCounter;
+  }
+  currentSid=sid;
+  const sess=sessions.find(s=>s.sid===sid)||sessions[0];
+  if(sess && sess.state){
+    state=JSON.parse(JSON.stringify(sess.state));
+  } else {
+    state=newSessionState();
+  }
+  // 確保所有欄位存在
+  if(!state.participants) state.participants=[];
+  if(!state.records) state.records=[];
+  if(!state.prizeDefs) state.prizeDefs=[];
+  if(!state.numPrizeDefs) state.numPrizeDefs=[];
+  if(state.magicNum===undefined) state.magicNum=null;
+  if(state.activeAlphaRid===undefined) state.activeAlphaRid=null;
+  if(state.activeLuckyRid===undefined) state.activeLuckyRid=null;
+  if(state.round1Done===undefined) state.round1Done=false;
+  if(state.gameOver===undefined) state.gameOver=false;
+  if(state.gameOverRid===undefined) state.gameOverRid=null;
+  state.records.forEach(r=>{if(r.claimed===undefined)r.claimed=false;});
+  pidCounter=state.participants.length?Math.max(...state.participants.map(p=>p.id)):0;
+  ridCounter=state.records.length?Math.max(...state.records.map(r=>r.rid)):0;
+  renderSessionBar();
+  renderAll();
+}
+
+function renderSessionBar(){
+  if(!Array.isArray(sessions)) return;
+  const sel=document.getElementById('session-select');
+  if(!sel) return;
+  sel.innerHTML=sessions.map(s=>'<option value="'+s.sid+'" '+(s.sid===currentSid?'selected':'')+'>'+esc(s.name)+'</option>').join('');
+}
+
+function switchSession(sid){
+  const sess=sessions.find(s=>s.sid===currentSid);
+  if(sess) sess.state=JSON.parse(JSON.stringify(state));
+  currentSid=parseInt(sid);
+  loadSession(currentSid);
+}
+
+function startNewSession(){
+  // 存目前
+  const sess=sessions.find(s=>s.sid===currentSid);
+  if(sess) sess.state=JSON.parse(JSON.stringify(state));
+  // 顯示名稱輸入
+  document.getElementById('session-name-inp').style.display='block';
+  document.getElementById('confirm-session-name-btn').style.display='block';
+  document.getElementById('new-session-btn').style.display='none';
+  document.getElementById('session-name-inp').value='場次 '+(sessions.length+1);
+  document.getElementById('session-name-inp').focus();
+}
+
+function confirmSessionName(){
+  const name=document.getElementById('session-name-inp').value.trim()||'場次 '+(sessions.length+1);
+  const sid=++sidCounter;
+  sessions.push({sid,name,state:newSessionState()});
+  document.getElementById('session-name-inp').style.display='none';
+  document.getElementById('confirm-session-name-btn').style.display='none';
+  document.getElementById('new-session-btn').style.display='block';
+  loadSession(sid);
+  save();
+}
+
+function deleteSession(){
+  if(sessions.length<=1){alert('至少保留一個場次');return;}
+  if(!confirm('確定刪除場次「'+sessions.find(s=>s.sid===currentSid)?.name+'」？此動作無法復原。'))return;
+  sessions=sessions.filter(s=>s.sid!==currentSid);
+  loadSession(sessions[sessions.length-1].sid);
+  save();
+}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+
+function renderAll(){
+  if(state.title) document.getElementById('event-title').textContent=state.title;
+  if(state.coverImg){const img=document.getElementById('cover-img');img.src=state.coverImg;img.style.display='inline-block';}
+  document.getElementById('btn-alpha').classList.toggle('active',state.mode==='alpha');
+  document.getElementById('btn-num').classList.toggle('active',state.mode==='num');
+  document.getElementById('alpha-setup').style.display=state.mode==='alpha'?'block':'none';
+  document.getElementById('num-setup').style.display=state.mode==='num'?'block':'none';
+  document.getElementById('round1-title').textContent=state.mode==='alpha'?'第一輪：字母抽獎':'第一輪：號碼抽獎';
+  if(state.mode==='alpha'){
+    if(state.prizeDefs.length){renderPrizeDefRows();renderPoolDisplay();}
+    if(state.magicNum!=null) document.getElementById('lucky-magic-display-alpha').textContent='目前：'+state.magicNum;
+  } else {
+    if(state.numPrizeDefs.length){renderNumPrizeDefRows();renderNumPoolDisplay();}
+    if(state.magicNum!=null) document.getElementById('lucky-magic-display-num').textContent='目前：'+state.magicNum;
+  }
+  renderParticipants();
+  document.getElementById('round1-section').style.display=state.records.length?'block':'none';
+  renderRound1();
+  renderRound2();
+  renderGameOver();
+}
+
+/* TITLE/COVER */
+function editTitle(){
+  const t=document.getElementById('event-title'),i=document.getElementById('title-input');
+  i.value=t.textContent==='點擊輸入活動標題'?'':t.textContent;
+  t.style.display='none';i.style.display='block';i.focus();
+}
+function saveTitle(){
+  const i=document.getElementById('title-input'),t=document.getElementById('event-title');
+  state.title=i.value.trim()||'點擊輸入活動標題';
+  t.textContent=state.title;t.style.display='inline-block';i.style.display='none';save();
+}
+function loadCoverImg(e){
+  const file=e.target.files[0];if(!file)return;
+  const r=new FileReader();
+  r.onload=ev=>{state.coverImg=ev.target.result;const img=document.getElementById('cover-img');img.src=state.coverImg;img.style.display='inline-block';save();};
+  r.readAsDataURL(file);
+}
+
+/* MODE */
+function setMode(m){
+  state.mode=m;
+  document.getElementById('btn-alpha').classList.toggle('active',m==='alpha');
+  document.getElementById('btn-num').classList.toggle('active',m==='num');
+  document.getElementById('alpha-setup').style.display=m==='alpha'?'block':'none';
+  document.getElementById('num-setup').style.display=m==='num'?'block':'none';
+  document.getElementById('round1-title').textContent=m==='alpha'?'第一輪：字母抽獎':'第一輪：號碼抽獎';
+  state.records.forEach(r=>{r.results=[];r.alphaLocked=false;r.luckyNums=[];r.luckyLocked=false;});
+  state.round1Done=false;state.gameOver=false;state.gameOverRid=null;
+  state.activeAlphaRid=state.records.length?state.records[0].rid:null;
+  state.activeLuckyRid=null;
+  save();renderAll();
+}
+
+/* MAGIC NUM */
+function setMagicNum(mode){
+  const inp=document.getElementById('magic-num-input-'+mode);
+  const v=parseInt(inp.value);
+  if(isNaN(v)||v<1||v>80){alert('請輸入 1–80 之間的數字');return;}
+  state.magicNum=v;
+  document.getElementById('lucky-magic-display-alpha').textContent='目前：'+v;
+  document.getElementById('lucky-magic-display-num').textContent='目前：'+v;
+  document.getElementById('magic-num-input-alpha').value=v;
+  document.getElementById('magic-num-input-num').value=v;
+  save();
+}
+
+/* ══ ALPHA PRIZE DEFS ══ */
+const LETTERS='ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+function addPrizeRow(){
+  if(!state||!state.prizeDefs){state=newSessionState();}
+  if(state.prizeDefs.length>=26)return;
+  state.prizeDefs.push({letter:LETTERS[state.prizeDefs.length],name:'',qty:0,img:''});
+  renderPrizeDefRows();
+}
+function removePrizeRow(idx){
+  state.prizeDefs.splice(idx,1);
+  state.prizeDefs.forEach((d,i)=>{d.letter=LETTERS[i];});
+  renderPrizeDefRows();
+}
+function loadPrizeImg(idx,e){
+  const file=e.target.files[0];if(!file)return;
+  const r=new FileReader();
+  r.onload=ev=>{state.prizeDefs[idx].img=ev.target.result;renderPrizeDefRows();};
+  r.readAsDataURL(file);
+}
+function renderPrizeDefRows(){
+  const list=document.getElementById('prize-def-list');list.innerHTML='';
+  state.prizeDefs.forEach((def,idx)=>{
+    const row=document.createElement('div');row.className='prize-def-row';
+    const hasImg=!!def.img;
+    row.innerHTML='<span class="prize-def-letter">'+def.letter+'</span>'+
+      '<input class="prize-def-name" type="text" placeholder="獎項名稱" value="'+esc(def.name)+'" oninput="state.prizeDefs['+idx+'].name=this.value">'+
+      '<input class="prize-def-qty" type="number" min="0" max="999" placeholder="數量" value="'+(def.qty||'')+'" oninput="state.prizeDefs['+idx+'].qty=parseInt(this.value)||0">'+
+      '<button class="prize-def-img-btn" onclick="document.getElementById(\'pimg'+idx+'\').click()">'+(hasImg?'換圖':'📷')+'</button>'+
+      '<input class="prize-img-input" id="pimg'+idx+'" type="file" accept="image/*" onchange="loadPrizeImg('+idx+',event)">'+
+      (hasImg?'<img class="prize-def-img-thumb" src="'+def.img+'">':'')+
+      '<button class="prize-def-del" onclick="removePrizeRow('+idx+')">✕</button>';
+    list.appendChild(row);
+  });
+}
+function confirmPrizes(){
+  if(!state.prizeDefs.length){alert('請新增至少一個獎項');return;}
+  renderPoolDisplay();renderRecordsAll();save();
+}
+function getUsedCounts(){
+  const u={};
+  state.records.forEach(r=>{r.results.forEach(rv=>{if(rv)u[rv]=(u[rv]||0)+1;});});
+  return u;
+}
+function renderPoolDisplay(){
+  const d=document.getElementById('prize-pool-display');d.style.display='block';
+  const re=document.getElementById('pool-rows');re.innerHTML='';
+  const u=getUsedCounts();let tR=0,tA=0;
+  state.prizeDefs.forEach(def=>{
+    const used=u[def.letter]||0,remain=def.qty-used;
+    tR+=Math.max(0,remain);tA+=def.qty;
+    const row=document.createElement('div');row.className='pool-row';
+    row.innerHTML='<div class="pool-row-name"><span class="prize-letter">'+def.letter+'賞</span>'+esc(def.name)+'</div>'+
+      '<div class="pool-row-count'+(remain<=0?' exhausted':'')+'">'+Math.max(0,remain)+' / '+def.qty+'</div>';
+    re.appendChild(row);
+  });
+  document.getElementById('pool-total-count').textContent=tR+' / '+tA;
+  updateFloatPool();
+}
+
+/* ══ NUM PRIZE DEFS ══ */
+// numPrizeDefs: [{from,to,name,img}]
+// result key = "prizeName(from-to)"  stored as index string "0","1",...
+let numPrizeDefCounter=0;
+function addNumPrizeRow(){
+  state.numPrizeDefs.push({id:numPrizeDefCounter++,from:'',to:'',name:'',img:''});
+  renderNumPrizeDefRows();
+}
+function removeNumPrizeRow(idx){
+  state.numPrizeDefs.splice(idx,1);
+  renderNumPrizeDefRows();
+}
+function loadNumPrizeImg(idx,e){
+  const file=e.target.files[0];if(!file)return;
+  const r=new FileReader();
+  r.onload=ev=>{state.numPrizeDefs[idx].img=ev.target.result;renderNumPrizeDefRows();};
+  r.readAsDataURL(file);
+}
+function renderNumPrizeDefRows(){
+  const list=document.getElementById('num-prize-def-list');list.innerHTML='';
+  state.numPrizeDefs.forEach((def,idx)=>{
+    const row=document.createElement('div');row.className='num-prize-row';
+    const hasImg=!!def.img;
+    const label=def.from===def.to&&def.from!==''?def.from:(def.from&&def.to?def.from+'–'+def.to:'?');
+    row.innerHTML='<span class="num-prize-row-label">'+esc(label)+'</span>'+
+      '<input class="num-range-from" type="number" placeholder="起" min="1" value="'+(def.from||'')+'" oninput="state.numPrizeDefs['+idx+'].from=parseInt(this.value)||this.value;renderNumPrizeDefRows()">'+
+      '<span class="range-sep">–</span>'+
+      '<input class="num-range-to" type="number" placeholder="止" min="1" value="'+(def.to||'')+'" oninput="state.numPrizeDefs['+idx+'].to=parseInt(this.value)||this.value;renderNumPrizeDefRows()">'+
+      '<input class="num-prize-name-inp" type="text" placeholder="獎項名稱" value="'+esc(def.name)+'" oninput="state.numPrizeDefs['+idx+'].name=this.value">'+
+      '<button class="prize-def-img-btn" onclick="document.getElementById(\'npimg'+idx+'\').click()">'+(hasImg?'換圖':'📷')+'</button>'+
+      '<input class="prize-img-input" id="npimg'+idx+'" type="file" accept="image/*" onchange="loadNumPrizeImg('+idx+',event)">'+
+      (hasImg?'<img class="prize-def-img-thumb" src="'+def.img+'">':'')+
+      '<button class="prize-def-del" onclick="removeNumPrizeRow('+idx+')">✕</button>';
+    list.appendChild(row);
+  });
+}
+// look up which prize def a number belongs to
+function getNumPrize(n){
+  const num=parseInt(n);
+  return state.numPrizeDefs.find(d=>{
+    const f=parseInt(d.from),t=parseInt(d.to||d.from);
+    return num>=f&&num<=t;
+  })||null;
+}
+// result options for num mode: list all prize defs as selectable labels
+function getNumResultOptions(){
+  if(!state.numPrizeDefs) return [];
+  return state.numPrizeDefs.map((d,i)=>{
+    const label=d.name||(d.from===d.to?String(d.from):d.from+'–'+d.to);
+    return {key:String(i),label};
+  });
+}
+function confirmNumPrizes(){
+  if(!state.numPrizeDefs.length){alert('請新增至少一個號碼獎項');return;}
+  renderNumPoolDisplay();renderRecordsAll();save();
+}
+function getNumUsedCounts(){
+  const u={};
+  state.records.forEach(r=>{r.results.forEach(rv=>{if(rv)u[rv]=(u[rv]||0)+1;});});
+  return u;
+}
+function renderNumPoolDisplay(){
+  const d=document.getElementById('num-pool-display');d.style.display='block';
+  const re=document.getElementById('num-pool-rows');re.innerHTML='';
+  const u=getNumUsedCounts();let tR=0,tA=0;
+  state.numPrizeDefs.forEach((def,idx)=>{
+    const rangeLabel=def.from===def.to||!def.to?String(def.from):def.from+'–'+def.to;
+    const total=1; // each prize def is one prize slot (name-based)
+    const used=u[String(idx)]||0,remain=total-used;
+    tR+=Math.max(0,remain);tA+=total;
+    const row=document.createElement('div');row.className='pool-row';
+    row.innerHTML='<div class="pool-row-name"><span class="prize-letter">'+esc(rangeLabel)+'</span>'+esc(def.name)+'</div>'+
+      '<div class="pool-row-count'+(remain<=0?' exhausted':'')+'">'+Math.max(0,remain)+' / '+total+'</div>';
+    re.appendChild(row);
+  });
+  document.getElementById('num-pool-total').textContent=tR+' / '+tA;
+  updateFloatPool();
+}
+
+/* PRIZE MODAL */
+function openPrizeModal(rid){
+  const rec=state.records.find(r=>r.rid===rid);if(!rec)return;
+  const body=document.getElementById('prize-modal-body');body.innerHTML='';
+  let any=false;
+  if(state.mode==='alpha'){
+    const counts={};rec.results.filter(Boolean).forEach(lt=>{counts[lt]=(counts[lt]||0)+1;});
+    state.prizeDefs.forEach(def=>{
+      if(!counts[def.letter])return;any=true;
+      const item=document.createElement('div');item.className='modal-prize-item';
+      const imgEl=def.img?document.createElement('img'):document.createElement('div');
+      imgEl.className='modal-prize-img'+(def.img?'':' no-img');
+      if(def.img){imgEl.src=def.img;imgEl.alt=def.name;}else{imgEl.textContent='無圖';}
+      const info=document.createElement('div');
+      info.innerHTML='<div class="modal-prize-letter">'+def.letter+'賞</div><div class="modal-prize-name">'+esc(def.name)+'</div><div class="modal-prize-count">× '+counts[def.letter]+'</div>';
+      item.append(imgEl,info);body.appendChild(item);
+    });
+  } else {
+    const counts={};rec.results.filter(Boolean).forEach(k=>{counts[k]=(counts[k]||0)+1;});
+    state.numPrizeDefs.forEach((def,idx)=>{
+      if(!counts[String(idx)])return;any=true;
+      const item=document.createElement('div');item.className='modal-prize-item';
+      const imgEl=def.img?document.createElement('img'):document.createElement('div');
+      imgEl.className='modal-prize-img'+(def.img?'':' no-img');
+      if(def.img){imgEl.src=def.img;imgEl.alt=def.name;}else{imgEl.textContent='無圖';}
+      const rangeLabel=def.from===def.to||!def.to?String(def.from):def.from+'–'+def.to;
+      const info=document.createElement('div');
+      info.innerHTML='<div class="modal-prize-letter">'+esc(rangeLabel)+'</div><div class="modal-prize-name">'+esc(def.name)+'</div><div class="modal-prize-count">× '+counts[String(idx)]+'</div>';
+      item.append(imgEl,info);body.appendChild(item);
+    });
+  }
+  if(!any){body.innerHTML='<div style="color:var(--muted);padding:10px 0;font-size:.85rem">尚未填入結果</div>';}
+  // 領取按鈕
+  const claimArea=document.createElement('div');claimArea.style.cssText='margin-top:14px;padding-top:12px;border-top:1px solid var(--border)';
+  const rec2=state.records.find(r=>r.rid===rid);
+  if(rec2){
+    const cb=document.createElement('button');
+    cb.className='modal-claim-btn'+(rec2.claimed?' claimed':'');
+    cb.textContent=rec2.claimed?'✓ 已領取　（點此取消）':'標記為已領取';
+    cb.onclick=()=>{rec2.claimed=!rec2.claimed;renderRound1();openPrizeModal(rid);save();};
+    claimArea.appendChild(cb);
+  }
+  body.appendChild(claimArea);
+  document.getElementById('prize-modal').style.display='block';
+}
+function closePrizeModal(){document.getElementById('prize-modal').style.display='none';}
+document.getElementById('prize-modal').addEventListener('click',function(e){if(e.target===this)closePrizeModal();});
+
+/* PARTICIPANTS */
+function addParticipant(){
+  if(!state||!state.participants){state=newSessionState();}
+  const inp=document.getElementById('participant-input');
+  const name=inp.value.trim();if(!name)return;
+  const newP={name,id:++pidCounter};
+  state.participants.push(newP);inp.value='';
+  const newRec={rid:++ridCounter,pid:newP.id,draws:1,results:[],alphaLocked:false,luckyNums:[],luckyLocked:false,claimed:false};
+  state.records.push(newRec);
+  if(state.activeAlphaRid===null)state.activeAlphaRid=newRec.rid;
+  document.getElementById('round1-section').style.display='block';
+  renderParticipants();renderRecordsAll();
+  if(state.mode==='alpha')renderPoolDisplay();else renderNumPoolDisplay();
+  save();
+}
+function removeParticipant(id){
+  const hasRecord=state.records.some(r=>r.pid===id);
+  if(hasRecord&&!confirm('此人已有抽獎紀錄，刪除後紀錄也會一併移除，確定？'))return;
+  if(hasRecord){
+    const rec=state.records.find(r=>r.pid===id);
+    if(rec){
+      if(state.activeAlphaRid===rec.rid)state.activeAlphaRid=state.records.find(r=>r.rid!==rec.rid&&!r.alphaLocked)?.rid||null;
+      if(state.activeLuckyRid===rec.rid)state.activeLuckyRid=state.records.find(r=>r.rid!==rec.rid&&!r.luckyLocked)?.rid||null;
+    }
+    state.records=state.records.filter(r=>r.pid!==id);
+  }
+  state.participants=state.participants.filter(p=>p.id!==id);
+  renderParticipants();renderRecordsAll();
+  if(state.mode==='alpha')renderPoolDisplay();else renderNumPoolDisplay();
+  save();
+}
+function renderParticipants(){
+  const usedPids=new Set(state.records.map(r=>r.pid));
+  const list=document.getElementById('participant-list');list.innerHTML='';
+  state.participants.forEach(p=>{
+    const tag=document.createElement('div');
+    tag.className='p-tag'+(usedPids.has(p.id)?' used':'');
+    tag.id='ptag-'+p.id;
+    tag.innerHTML=p.name+'<span class="remove-p" onclick="removeParticipant('+p.id+')">✕</span>';
+    list.appendChild(tag);
+  });
+}
+function updateParticipantHighlight(){
+  const usedPids=new Set(state.records.map(r=>r.pid));
+  state.participants.forEach(p=>{
+    const tag=document.getElementById('ptag-'+p.id);
+    if(tag)tag.className='p-tag'+(usedPids.has(p.id)?' used':'');
+  });
+}
+function removeRecord(rid){
+  state.records=state.records.filter(r=>r.rid!==rid);
+  if(state.activeAlphaRid===rid)state.activeAlphaRid=state.records.find(r=>!r.alphaLocked)?.rid||null;
+  if(state.activeLuckyRid===rid)state.activeLuckyRid=state.records.find(r=>!r.luckyLocked)?.rid||null;
+  renderRecordsAll();updateParticipantHighlight();
+  if(state.mode==='alpha')renderPoolDisplay();else renderNumPoolDisplay();save();
+}
+
+/* RESULT OPTIONS */
+function buildResultOptions(rec,slotIdx){
+  if(!rec) return '<option value="">？</option>';
+  if(!rec.results) rec.results=[];
+  if(!state.prizeDefs) state.prizeDefs=[];
+  if(!state.numPrizeDefs) state.numPrizeDefs=[];
+  if(state.mode==='alpha'){
+    const used={};
+    state.records.forEach(r=>{if(!r.results)r.results=[];r.results.forEach((rv,ri)=>{if(rv&&!(r.rid===rec.rid&&ri===slotIdx))used[rv]=(used[rv]||0)+1;});});
+    let html='<option value="">？</option>';
+    state.prizeDefs.forEach(def=>{
+      const remain=def.qty-(used[def.letter]||0);
+      const isCur=rec.results[slotIdx]===def.letter;
+      if(remain>0||isCur)html+='<option value="'+def.letter+'" '+(isCur?'selected':'')+'>'+def.letter+'</option>';
+    });
+    return html;
+  } else {
+    // num mode: each numPrizeDef is a selectable key (index)
+    const opts=getNumResultOptions();
+    let html='<option value="">？</option>';
+    opts.forEach(o=>{
+      const isCur=rec.results[slotIdx]===o.key;
+      html+='<option value="'+o.key+'" '+(isCur?'selected':'')+'>'+esc(o.label)+'</option>';
+    });
+    return html;
+  }
+}
+
+/* RESULT SUMMARY */
+function buildResultSummary(rec,container){
+  container.innerHTML='';
+  const filled=rec.results.filter(Boolean);
+  if(!filled.length)return;
+  const lbl=document.createElement('div');lbl.className='sec-label';lbl.textContent='結果統整';container.appendChild(lbl);
+  const row=document.createElement('div');row.className='sum-row';
+  if(state.mode==='alpha'){
+    const counts={};filled.forEach(lt=>{counts[lt]=(counts[lt]||0)+1;});
+    state.prizeDefs.forEach(def=>{
+      if(!counts[def.letter])return;
+      const chip=document.createElement('div');chip.className='sum-chip';
+      chip.innerHTML='<span class="sc-letter">'+def.letter+'賞</span>'+esc(def.name)+' × '+counts[def.letter];
+      row.appendChild(chip);
+    });
+  } else {
+    const counts={};filled.forEach(k=>{counts[k]=(counts[k]||0)+1;});
+    state.numPrizeDefs.forEach((def,idx)=>{
+      if(!counts[String(idx)])return;
+      const chip=document.createElement('div');chip.className='sum-chip';
+      const rangeLabel=def.from===def.to||!def.to?String(def.from):def.from+'–'+def.to;
+      chip.innerHTML='<span class="sc-letter">'+esc(rangeLabel)+'</span>'+esc(def.name)+' × '+counts[String(idx)];
+      row.appendChild(chip);
+    });
+  }
+  const btn=document.createElement('button');btn.className='view-prize-btn';
+  btn.textContent='🏆 看獎項';btn.onclick=()=>openPrizeModal(rec.rid);
+  row.appendChild(btn);
+  const claimBtn=document.createElement('button');
+  claimBtn.className='claim-btn'+(rec.claimed?' claimed':'');
+  claimBtn.textContent=rec.claimed?'✓ 已領取':'未領取';
+  claimBtn.onclick=()=>{rec.claimed=!rec.claimed;renderRound1();save();};
+  row.appendChild(claimBtn);
+  container.appendChild(row);
+}
+
+/* ROUND 1 */
+function renderRound1(){
+  const list=document.getElementById('round1-list');list.innerHTML='';
+  state.records.forEach(rec=>{
+    const isActive=state.activeAlphaRid===rec.rid&&!state.round1Done;
+    const card=document.createElement('div');
+    card.className='record-card'+(isActive?' active-card':'');
+
+    const hdr=document.createElement('div');hdr.className='record-header';
+    const nameSel=document.createElement('select');
+    // 計算每個 pid 在其他 records 被用幾次
+    const usedPidCount={};
+    state.records.forEach(r=>{if(r.rid!==rec.rid&&r.pid)usedPidCount[r.pid]=(usedPidCount[r.pid]||0)+1;});
+    // 每個 participant id 出現次數（允許重複報名）
+    const pidTotalCount={};
+    state.participants.forEach(p=>{pidTotalCount[p.id]=(pidTotalCount[p.id]||0)+1;});
+    nameSel.innerHTML='<option value="">── 選擇 ──</option>'+state.participants.filter(p=>{
+      // 若此 participant 已被其他 record 選用次數 >= 其在名單中出現次數，則不顯示（除非自己選的就是他）
+      const totalSlots=pidTotalCount[p.id]||1;
+      const usedElsewhere=usedPidCount[p.id]||0;
+      return rec.pid===p.id || usedElsewhere<totalSlots;
+    }).map(p=>'<option value="'+p.id+'" '+(rec.pid===p.id?'selected':'')+'>'+p.name+'</option>').join('');
+    nameSel.onchange=()=>{rec.pid=nameSel.value?parseInt(nameSel.value):null;updateParticipantHighlight();save();};
+    const drawLbl=document.createElement('span');drawLbl.className='hdr-label';drawLbl.textContent='抽數';
+    const drawInp=document.createElement('input');drawInp.type='number';drawInp.min=1;drawInp.max=99;drawInp.value=rec.draws;
+    drawInp.onchange=()=>{
+      const n=Math.max(1,parseInt(drawInp.value)||1);rec.draws=n;
+      while(rec.results.length<n)rec.results.push('');
+      rec.results=rec.results.slice(0,n);
+      renderRecordsAll();save();
+    };
+    // 總獎數 & 已分配抽數提示
+    const totalPrizes=state.mode==='alpha'
+      ?state.prizeDefs.reduce((s,d)=>s+d.qty,0)
+      :state.numPrizeDefs.length;
+    // 其他人已佔用的抽數
+    const usedDraws=state.records.filter(r=>r.rid!==rec.rid).reduce((s,r)=>s+(r.draws||0),0);
+    const remainDraws=totalPrizes-usedDraws;
+    const drawHint=document.createElement('span');
+    drawHint.style.cssText='color:var(--muted);font-size:.72rem;opacity:.8';
+    if(totalPrizes>0) drawHint.textContent='/ '+totalPrizes+'　剩 '+remainDraws;
+
+    if(rec.alphaLocked){
+      const lk=document.createElement('span');lk.className='alpha-locked-tag';lk.textContent='✓ 已完成';
+      hdr.append(nameSel,drawLbl,drawInp,drawHint,lk);
+    } else {
+      const delBtn=document.createElement('button');delBtn.className='del-row-btn';delBtn.textContent='刪除';
+      delBtn.onclick=()=>removeRecord(rec.rid);
+      hdr.append(nameSel,drawLbl,drawInp,drawHint,delBtn);
+    }
+    card.appendChild(hdr);
+
+    const resSection=document.createElement('div');resSection.className='result-section';
+    const rsLbl=document.createElement('div');rsLbl.className='sec-label';rsLbl.textContent='抽獎結果';resSection.appendChild(rsLbl);
+    const boxes=document.createElement('div');boxes.className='result-boxes';
+    if(!rec.results) rec.results=[];
+    while(rec.results.length<rec.draws) rec.results.push('');
+    for(let i=0;i<rec.draws;i++){
+      const box=document.createElement('div');box.className='result-box';
+      const rs=document.createElement('select');rs.innerHTML=buildResultOptions(rec,i);
+      if(rec.alphaLocked)rs.disabled=true;
+      const idx=i;
+      rs.onchange=()=>{
+        rec.results[idx]=rs.value;
+        renderRound1();
+        if(state.mode==='alpha')renderPoolDisplay();else renderNumPoolDisplay();
+        save();
+      };
+      box.appendChild(rs);boxes.appendChild(box);
+    }
+    resSection.appendChild(boxes);card.appendChild(resSection);
+
+    const sumSection=document.createElement('div');sumSection.className='result-summary';
+    buildResultSummary(rec,sumSection);card.appendChild(sumSection);
+
+    // lucky also
+    if(state.round1Done&&rec.luckyNums&&rec.luckyNums.length){
+      const la=document.createElement('div');la.className='lucky-also';
+      const laLbl=document.createElement('div');laLbl.className='la-label';laLbl.textContent='🌟 第二輪幸運數字';la.appendChild(laLbl);
+      const numsRow=document.createElement('div');numsRow.className='lucky-nums-display';
+      rec.luckyNums.forEach(n=>{
+        const chip=document.createElement('div');
+        chip.className='lucky-chip '+(n===state.magicNum?'magic-chip':'normal');
+        chip.textContent=(n===state.magicNum?'★ ':'')+n;
+        numsRow.appendChild(chip);
+      });
+      la.appendChild(numsRow);card.appendChild(la);
+    }
+
+    if(isActive&&!rec.alphaLocked){
+      const row=document.createElement('div');row.className='alpha-next-row';
+      const btn=document.createElement('button');btn.className='next-alpha-btn';btn.textContent='下一位 →';
+      btn.onclick=()=>{
+        const missing=rec.results.filter(r=>!r).length;
+        if(missing>0&&!confirm('還有 '+missing+' 格未填，確定繼續？'))return;
+        rec.alphaLocked=true;
+        const next=state.records.find(r=>!r.alphaLocked);
+        state.activeAlphaRid=next?next.rid:null;
+        if(!state.activeAlphaRid){
+          state.round1Done=true;
+          state.activeLuckyRid=state.records[0].rid;
+          document.getElementById('round2-section').style.display='block';
+        }
+        renderRecordsAll();
+        if(state.mode==='alpha')renderPoolDisplay();else renderNumPoolDisplay();
+        save();
+      };
+      row.appendChild(btn);card.appendChild(row);
+    }
+    list.appendChild(card);
+  });
+  updateParticipantHighlight();
+}
+
+/* ROUND 2 */
+function getLockedLuckyNums(){
+  const s=new Set();
+  state.records.forEach(r=>{if(r.luckyLocked)r.luckyNums.forEach(n=>s.add(n));});
+  return s;
+}
+function renderRound2(){
+  if(!state.round1Done){document.getElementById('round2-section').style.display='none';return;}
+  document.getElementById('round2-section').style.display='block';
+  const list=document.getElementById('round2-list');list.innerHTML='';
+  const lockedNums=getLockedLuckyNums();
+
+  state.records.forEach(rec=>{
+    if(state.gameOver&&!rec.luckyLocked&&state.gameOverRid!==rec.rid)return;
+    const isActive=state.activeLuckyRid===rec.rid&&!state.gameOver;
+    const card=document.createElement('div');
+    card.className='record-card'+(isActive?' active-lucky-card':'');
+
+    const hdr=document.createElement('div');hdr.className='record-header';
+    const p=state.participants.find(x=>x.id===rec.pid);
+    const nameSpan=document.createElement('span');nameSpan.style.cssText='font-weight:600;color:var(--text)';
+    nameSpan.textContent=p?p.name:'（未命名）';
+    const countSpan=document.createElement('span');countSpan.className='hdr-label';
+    countSpan.textContent='可抽 '+rec.draws+' 個';
+    hdr.append(nameSpan,countSpan);
+    if(rec.luckyLocked){const lk=document.createElement('span');lk.className='alpha-locked-tag';lk.style.marginLeft='auto';lk.textContent='✓ 已確認';hdr.appendChild(lk);}
+    card.appendChild(hdr);
+
+    const ls=document.createElement('div');ls.className='lucky-section';
+
+    if(rec.luckyLocked){
+      const chips=document.createElement('div');chips.style.cssText='display:flex;flex-wrap:wrap;gap:5px';
+      rec.luckyNums.forEach(n=>{
+        const chip=document.createElement('div');
+        chip.className='lucky-chip '+(n===state.magicNum?'magic-chip':'normal');
+        chip.textContent=(n===state.magicNum?'★ ':'')+n;
+        chips.appendChild(chip);
+      });
+      ls.appendChild(chips);
+    } else if(isActive){
+      const hint=document.createElement('div');hint.className='sec-label';
+      hint.textContent='單擊選取 · 再單擊取消 · 選滿後按「下一位」確認';ls.appendChild(hint);
+      const grid=document.createElement('div');grid.className='lucky-grid';
+      const mySet=new Set(rec.luckyNums);
+      for(let i=1;i<=80;i++){
+        const c=document.createElement('div');
+        const isGone=lockedNums.has(i),isMine=mySet.has(i),isMagic=state.magicNum===i;
+        if(isGone)c.className='lc gone';
+        else if(isMine)c.className='lc '+(isMagic?'magic-mine':'mine');
+        else c.className='lc '+(isMagic?'magic-avail':'avail');
+        c.textContent=i;
+        if(!isGone){
+          let timer=null;
+          c.addEventListener('click',(function(num,magic){return function(){
+            if(timer){clearTimeout(timer);timer=null;
+              rec.luckyNums=rec.luckyNums.filter(x=>x!==num);
+              renderRound2();renderRound1();save();
+            } else {
+              timer=setTimeout(()=>{timer=null;
+                if(!new Set(rec.luckyNums).has(num)){
+                  if(rec.luckyNums.length>=rec.draws){toast('已選滿 '+rec.draws+' 個');return;}
+                  rec.luckyNums.push(num);
+                  if(magic){
+                    renderRound2();renderRound1();save();
+                    setTimeout(()=>alert('🎉 恭喜！抽到幸運數字 '+num+'！遊戲即將結束！'),80);
+                  } else {renderRound2();renderRound1();save();}
+                }
+              },260);
+            }
+          };})(i,isMagic));
+        }
+        grid.appendChild(c);
+      }
+      ls.appendChild(grid);
+      const confirmRow=document.createElement('div');confirmRow.className='lucky-confirm-row';
+      const prog=document.createElement('div');prog.className='lucky-progress';prog.textContent='已選 '+rec.luckyNums.length+' / '+rec.draws;
+      const btn=document.createElement('button');btn.className='next-lucky-btn';btn.textContent='下一位 →';
+      btn.onclick=()=>{
+        const missing=rec.draws-rec.luckyNums.length;
+        if(missing>0&&!confirm('還有 '+missing+' 個未選，確定繼續？'))return;
+        rec.luckyLocked=true;
+        const hitMagic=rec.luckyNums.includes(state.magicNum);
+        if(hitMagic){state.gameOver=true;state.gameOverRid=rec.rid;renderRound2();renderRound1();renderGameOver();save();return;}
+        const next=state.records.find(r=>!r.luckyLocked);
+        state.activeLuckyRid=next?next.rid:null;
+        if(!state.activeLuckyRid){state.gameOver=true;state.gameOverRid=null;}
+        renderRound2();renderRound1();renderGameOver();save();
+      };
+      confirmRow.append(prog,btn);ls.appendChild(confirmRow);
+    } else {
+      const w=document.createElement('div');w.className='waiting-label';w.textContent='等待輪到此人…';ls.appendChild(w);
+    }
+    card.appendChild(ls);list.appendChild(card);
+  });
+}
+
+function renderGameOver(){
+  const banner=document.getElementById('game-over-banner');
+  if(!state.gameOver){banner.style.display='none';return;}
+  banner.style.display='block';
+  const sub=document.getElementById('go-sub-text');
+  if(state.gameOverRid){
+    const rec=state.records.find(r=>r.rid===state.gameOverRid);
+    const p=rec?state.participants.find(x=>x.id===rec.pid):null;
+    sub.textContent=(p?p.name:'某位參加者')+' 抽到了幸運數字 '+state.magicNum+'！遊戲結束。';
+  } else {sub.textContent='所有人已完成抽籤。';}
+}
+
+function renderRecordsAll(){renderRound1();renderRound2();updateFloatPool();}
+
+/* EXPORT */
+function exportTxt(){
+  const title=state.title||'抽獎紀錄';
+  const lines=[title,'='.repeat(30),''];
+  if(state.mode==='alpha'&&state.prizeDefs.length){
+    const u=getUsedCounts();lines.push('【獎項庫存】');
+    state.prizeDefs.forEach(def=>lines.push('  '+def.letter+'賞 '+def.name+'　'+Math.max(0,def.qty-(u[def.letter]||0))+' / '+def.qty));
+    lines.push('');
+  }
+  lines.push('【第一輪抽獎】');
+  state.records.forEach((rec,i)=>{
+    const p=state.participants.find(x=>x.id===rec.pid);
+    const name=p?p.name:'（未選）';
+    let res='';
+    if(state.mode==='alpha'){res=rec.results.filter(Boolean).join('、')||'（未填）';}
+    else{res=rec.results.filter(Boolean).map(k=>{const d=state.numPrizeDefs[parseInt(k)];return d?d.name:k;}).join('、')||'（未填）';}
+    lines.push('#'+(i+1)+' '+name+'　結果：'+res);
+  });
+  if(state.round1Done){
+    lines.push('','【第二輪：幸運數字】');
+    if(state.magicNum)lines.push('  幸運數字：'+state.magicNum);
+    state.records.forEach((rec,i)=>{
+      if(!rec.luckyNums||!rec.luckyNums.length)return;
+      const p=state.participants.find(x=>x.id===rec.pid);
+      const hit=rec.luckyNums.includes(state.magicNum)?'★ 中獎！':'';
+      lines.push('#'+(i+1)+' '+(p?p.name:'?')+'　'+rec.luckyNums.join('、')+' '+hit);
+    });
+  }
+  lines.push('','匯出時間：'+new Date().toLocaleString('zh-TW'));
+  const blob=new Blob([lines.join('\n')],{type:'text/plain;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=title+'_結果.txt';a.click();
+}
+
+async function exportPdf(){
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+  const title=state.title||'抽獎紀錄';
+  const canvas=document.createElement('canvas');canvas.width=794;canvas.height=1123;
+  const ctx=canvas.getContext('2d');
+  ctx.fillStyle='#f7f4ef';ctx.fillRect(0,0,794,1123);
+  ctx.fillStyle='#8b6f47';ctx.font='bold 26px "Microsoft JhengHei",sans-serif';ctx.textAlign='center';ctx.fillText(title,397,48);
+  ctx.strokeStyle='#c0392b';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(60,58);ctx.lineTo(734,58);ctx.stroke();
+  let y=80;
+  ctx.fillStyle='#5a7a6a';ctx.font='bold 12px "Microsoft JhengHei",sans-serif';ctx.textAlign='left';ctx.fillText('第一輪抽獎',40,y);y+=14;
+  ctx.strokeStyle='#8b6f47';ctx.lineWidth=.8;ctx.beginPath();ctx.moveTo(30,y);ctx.lineTo(764,y);ctx.stroke();y+=12;
+  state.records.forEach((rec,i)=>{
+    const p=state.participants.find(x=>x.id===rec.pid);
+    const name=p?p.name:'（未選）';
+    let res='';
+    if(state.mode==='alpha')res=rec.results.filter(Boolean).join('、')||'（未填）';
+    else res=rec.results.filter(Boolean).map(k=>{const d=state.numPrizeDefs[parseInt(k)];return d?d.name:k;}).join('、')||'（未填）';
+    ctx.fillStyle=i%2===0?'#2c2416':'#6b5c47';ctx.font='11px "Microsoft JhengHei",sans-serif';ctx.textAlign='left';
+    ctx.fillText((i+1)+'. '+name+'　'+res,40,y);y+=20;if(y>1080)y=80;
+  });
+  if(state.round1Done){
+    y+=6;ctx.fillStyle='#b8860b';ctx.font='bold 12px "Microsoft JhengHei",sans-serif';ctx.fillText('第二輪：幸運數字',40,y);y+=14;
+    ctx.strokeStyle='#b8860b';ctx.lineWidth=.8;ctx.beginPath();ctx.moveTo(30,y);ctx.lineTo(764,y);ctx.stroke();y+=12;
+    state.records.forEach((rec,i)=>{
+      if(!rec.luckyNums||!rec.luckyNums.length)return;
+      const p=state.participants.find(x=>x.id===rec.pid);
+      const hit=rec.luckyNums.includes(state.magicNum);
+      ctx.fillStyle=hit?'#b8860b':(i%2===0?'#2c2416':'#6b5c47');ctx.font='11px "Microsoft JhengHei",sans-serif';ctx.textAlign='left';
+      ctx.fillText((hit?'★ ':' ')+(i+1)+'. '+(p?p.name:'?')+'　'+rec.luckyNums.join(' '),40,y);y+=20;if(y>1080)y=80;
+    });
+  }
+  ctx.fillStyle='#9e8c78';ctx.font='10px "Microsoft JhengHei",sans-serif';ctx.textAlign='right';ctx.fillText('匯出時間：'+new Date().toLocaleString('zh-TW'),764,1108);
+  doc.addImage(canvas.toDataURL('image/png'),'PNG',0,0,210,297);doc.save(title+'_結果.pdf');
+}
+
+function toast(msg){
+  const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),1500);
+}
+
+
+/* FLOATING POOL */
+let floatExpanded=false;
+function toggleFloatPool(){
+  floatExpanded=!floatExpanded;
+  document.getElementById('float-pool-body').style.display=floatExpanded?'block':'none';
+  document.getElementById('float-pool-toggle').textContent=floatExpanded?'▼ 收合':'▲ 展開';
+}
+function updateFloatPool(){
+  const panel=document.getElementById('float-pool');
+  if(!state.prizeDefs.length&&!state.numPrizeDefs.length){panel.style.display='none';return;}
+  panel.style.display='block';
+  const rows=document.getElementById('float-pool-rows');rows.innerHTML='';
+  let tR=0,tA=0;
+  if(state.mode==='alpha'){
+    const u=getUsedCounts();
+    state.prizeDefs.forEach(def=>{
+      const used=u[def.letter]||0,remain=def.qty-used;
+      tR+=Math.max(0,remain);tA+=def.qty;
+      const row=document.createElement('div');row.className='pool-row';
+      row.innerHTML='<div class="pool-row-name"><span class="prize-letter">'+def.letter+'賞</span>'+esc(def.name)+'</div>'+
+        '<div class="pool-row-count'+(remain<=0?' exhausted':'')+'">'+Math.max(0,remain)+' / '+def.qty+'</div>';
+      rows.appendChild(row);
+    });
+  } else {
+    const u=getNumUsedCounts();
+    state.numPrizeDefs.forEach((def,idx)=>{
+      const used=u[String(idx)]||0,remain=1-used;
+      tR+=Math.max(0,remain);tA+=1;
+      const rangeLabel=def.from===def.to||!def.to?String(def.from):def.from+'–'+def.to;
+      const row=document.createElement('div');row.className='pool-row';
+      row.innerHTML='<div class="pool-row-name"><span class="prize-letter">'+esc(rangeLabel)+'</span>'+esc(def.name)+'</div>'+
+        '<div class="pool-row-count'+(remain<=0?' exhausted':'')+'">'+Math.max(0,remain)+' / 1</div>';
+      rows.appendChild(row);
+    });
+  }
+  document.getElementById('float-pool-total').textContent=tR+' / '+tA;
+  document.getElementById('float-pool-total2').textContent=tR+' / '+tA;
+
+  // 在 float-pool-header 旁加各獎項 chips
+  let chipsBar=document.getElementById('float-chips-bar');
+  if(!chipsBar){
+    chipsBar=document.createElement('div');
+    chipsBar.id='float-chips-bar';
+    chipsBar.style.cssText='display:flex;flex-wrap:wrap;gap:4px;align-items:center;padding:0 10px;flex:1;overflow:hidden;';
+    const hdr=document.getElementById('float-pool-header');
+    const toggle=document.getElementById('float-pool-toggle');
+    hdr.insertBefore(chipsBar, toggle);
+  }
+  chipsBar.innerHTML='';
+  if(state.mode==='alpha'){
+    const u=getUsedCounts();
+    state.prizeDefs.forEach(def=>{
+      const remain=def.qty-(u[def.letter]||0);
+      const chip=document.createElement('span');
+      chip.style.cssText='font-size:.7rem;padding:2px 7px;border-radius:10px;border:1px solid '+(remain<=0?'var(--border)':'var(--border2)')+';background:var(--bg2);color:'+(remain<=0?'var(--muted)':'var(--accent2)')+';white-space:nowrap;';
+      chip.textContent=def.letter+' '+remain+'/'+def.qty;
+      chipsBar.appendChild(chip);
+    });
+  } else if(state.mode==='num'){
+    const u=getNumUsedCounts();
+    state.numPrizeDefs.forEach((def,idx)=>{
+      const remain=1-(u[String(idx)]||0);
+      const rangeLabel=def.from===def.to||!def.to?String(def.from):def.from+'–'+def.to;
+      const chip=document.createElement('span');
+      chip.style.cssText='font-size:.7rem;padding:2px 7px;border-radius:10px;border:1px solid '+(remain<=0?'var(--border)':'var(--border2)')+';background:var(--bg2);color:'+(remain<=0?'var(--muted)':'var(--accent2)')+';white-space:nowrap;';
+      chip.textContent=rangeLabel+' '+remain+'/1';
+      chipsBar.appendChild(chip);
+    });
+  }
+
+  document.body.style.paddingBottom='60px';
+}
+
+// 只有往下滑超過獎項設定區才顯示
+function handleScroll(){
+  const prizeSection=document.querySelector('.section');
+  if(!prizeSection)return;
+  const bottom=prizeSection.getBoundingClientRect().bottom;
+  const panel=document.getElementById('float-pool');
+  if(bottom<0){
+    if(state.prizeDefs.length||state.numPrizeDefs.length) panel.style.display='block';
+  } else {
+    panel.style.display='none';
+    if(floatExpanded){floatExpanded=false;document.getElementById('float-pool-body').style.display='none';document.getElementById('float-pool-toggle').textContent='▲ 展開';}
+  }
+}
+window.addEventListener('scroll',handleScroll,{passive:true});
+
+load();
+</script>
+</body>
+</html>
