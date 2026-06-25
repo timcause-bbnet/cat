@@ -537,8 +537,8 @@ function load(){
         if(!state.records)state.records=[];
         if(!state.prizeDefs)state.prizeDefs=[];
         if(!state.numPrizeDefs)state.numPrizeDefs=[];
-        if(!state.coverImg)state.coverImg=prevCoverImg;
-        if(!state.coverImg2)state.coverImg2=prevCoverImg2;
+        if(!state.coverImg||state.coverImg==='[img]') state.coverImg=prevCoverImg;
+        if(!state.coverImg2||state.coverImg2==='[img]') state.coverImg2=prevCoverImg2;
         if(state.magicNum===undefined)state.magicNum=null;
         if(state.activeAlphaRid===undefined)state.activeAlphaRid=null;
         if(state.activeLuckyRid===undefined)state.activeLuckyRid=null;
@@ -561,6 +561,8 @@ function load(){
         });
         pidCounter=state.participants.length?Math.max(...state.participants.map(p=>p.id)):0;
         ridCounter=state.records.length?Math.max(...state.records.map(r=>r.rid)):0;
+        // 補回本地儲存的圖片 URL
+        loadImgUrls();
       }
       renderSessionBar();
       renderAll();
@@ -605,8 +607,8 @@ function loadSession(sid){
     state=newSessionState();
   }
   // 確保所有欄位存在
-  if(!state.coverImg) state.coverImg='';
-  if(!state.coverImg2) state.coverImg2='';
+  if(!state.coverImg||state.coverImg==='[img]') state.coverImg='';
+  if(!state.coverImg2||state.coverImg2==='[img]') state.coverImg2='';
   if(!state.participants) state.participants=[];
   if(!state.records) state.records=[];
   if(!state.prizeDefs) state.prizeDefs=[];
@@ -698,6 +700,7 @@ function renderAll(){
   if(state.title) document.getElementById('event-title').textContent=state.title;
   [['1',state.coverImg||''],['2',state.coverImg2||'']].forEach(function(pair){
     var slot=pair[0],url=pair[1];
+    if(url==='[img]') url='';
     var img=document.getElementById('cover-img-'+slot);
     var inp=document.getElementById('cover-url-'+slot);
     if(inp) inp.value=url;
@@ -760,6 +763,9 @@ function saveImgUrls(){
   try{sessionStorage.setItem('lottery_imgs',str);}catch(e){}
 }
 
+function isValidImgUrl(url){
+  return url&&url!=='[img]'&&url.startsWith('http');
+}
 function loadImgUrls(){
   let str=null;
   try{str=localStorage.getItem('lottery_imgs');}catch(e){}
@@ -767,12 +773,12 @@ function loadImgUrls(){
   if(!str) return;
   try{
     const d=JSON.parse(str);
-    if(d.coverImg&&!state.coverImg) state.coverImg=d.coverImg;
-    if(d.coverImg2&&!state.coverImg2) state.coverImg2=d.coverImg2;
+    if(isValidImgUrl(d.coverImg)) state.coverImg=d.coverImg;
+    if(isValidImgUrl(d.coverImg2)) state.coverImg2=d.coverImg2;
     if(d.prizeDefs&&state.prizeDefs){
       d.prizeDefs.forEach(function(pd){
         const def=state.prizeDefs.find(function(x){return x.letter===pd.letter;});
-        if(def&&!def.img&&pd.img) def.img=pd.img;
+        if(def&&isValidImgUrl(pd.img)) def.img=pd.img;
       });
     }
   }catch(e){}
