@@ -326,15 +326,15 @@ input:focus,select:focus{border-color:var(--accent2)}
     <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;min-width:140px">
       <img id="cover-img-1" src="" alt="" style="display:none;width:100%;max-width:260px;height:160px;object-fit:cover;border-radius:10px;border:2px solid rgba(255,255,255,.3)">
       <div style="display:flex;gap:6px;width:100%;max-width:260px">
-        <input id="cover-url-1" type="text" placeholder="左側圖片網址" style="flex:1;padding:5px 8px;border-radius:7px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.15);color:#fff;font-size:.75rem;min-width:0">
-        <button onclick="setCoverUrl(1)" style="padding:5px 10px;background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.4);border-radius:7px;cursor:pointer;font-size:.75rem">套用</button>
+        <input id="cover-url-1" type="text" placeholder="左側圖片網址" style="flex:1;padding:5px 8px;border-radius:7px;border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-size:.75rem;min-width:0">
+        <button onclick="setCoverUrl(1)" style="padding:5px 10px;background:var(--accent2);color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:.75rem;white-space:nowrap">套用</button>
       </div>
     </div>
     <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;min-width:140px">
       <img id="cover-img-2" src="" alt="" style="display:none;width:100%;max-width:260px;height:160px;object-fit:cover;border-radius:10px;border:2px solid rgba(255,255,255,.3)">
       <div style="display:flex;gap:6px;width:100%;max-width:260px">
-        <input id="cover-url-2" type="text" placeholder="右側圖片網址" style="flex:1;padding:5px 8px;border-radius:7px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.15);color:#fff;font-size:.75rem;min-width:0">
-        <button onclick="setCoverUrl(2)" style="padding:5px 10px;background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.4);border-radius:7px;cursor:pointer;font-size:.75rem">套用</button>
+        <input id="cover-url-2" type="text" placeholder="右側圖片網址" style="flex:1;padding:5px 8px;border-radius:7px;border:1px solid var(--border2);background:var(--bg2);color:var(--text);font-size:.75rem;min-width:0">
+        <button onclick="setCoverUrl(2)" style="padding:5px 10px;background:var(--accent2);color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:.75rem;white-space:nowrap">套用</button>
       </div>
     </div>
   </div>
@@ -620,6 +620,7 @@ function loadSession(sid){
   state.records.forEach(r=>{if(r.claimed===undefined)r.claimed=false;});
   pidCounter=state.participants.length?Math.max(...state.participants.map(p=>p.id)):0;
   ridCounter=state.records.length?Math.max(...state.records.map(r=>r.rid)):0;
+  loadImgUrls();
   renderSessionBar();
   renderAll();
 }
@@ -736,16 +737,45 @@ function setCoverUrl(slot){
   const url=(document.getElementById('cover-url-'+slot).value||'').trim();
   if(slot===1){
     state.coverImg=url;
-    const img=document.getElementById('cover-img-1');
-    if(url){img.src=url;img.style.display='block';img.onerror=function(){img.style.display='none';toast('左側圖片無法載入');};}
-    else{img.style.display='none';}
   } else {
     state.coverImg2=url;
-    const img=document.getElementById('cover-img-2');
-    if(url){img.src=url;img.style.display='block';img.onerror=function(){img.style.display='none';toast('右側圖片無法載入');};}
-    else{img.style.display='none';}
   }
+  // 圖片 URL 額外存在獨立 key，不被 Firebase 覆蓋
+  saveImgUrls();
+  const img=document.getElementById('cover-img-'+slot);
+  if(url){img.src=url;img.style.display='block';img.onerror=function(){img.style.display='none';toast('圖片無法載入，請確認網址是否為直連圖片');};}
+  else{img.style.display='none';}
   save();
+}
+
+function saveImgUrls(){
+  // 收集所有圖片 URL 存到獨立 key
+  const imgData={
+    coverImg:state.coverImg||'',
+    coverImg2:state.coverImg2||'',
+    prizeDefs:(state.prizeDefs||[]).map(function(d){return{letter:d.letter,img:d.img||''};})
+  };
+  const str=JSON.stringify(imgData);
+  try{localStorage.setItem('lottery_imgs',str);}catch(e){}
+  try{sessionStorage.setItem('lottery_imgs',str);}catch(e){}
+}
+
+function loadImgUrls(){
+  let str=null;
+  try{str=localStorage.getItem('lottery_imgs');}catch(e){}
+  if(!str){try{str=sessionStorage.getItem('lottery_imgs');}catch(e){}}
+  if(!str) return;
+  try{
+    const d=JSON.parse(str);
+    if(d.coverImg&&!state.coverImg) state.coverImg=d.coverImg;
+    if(d.coverImg2&&!state.coverImg2) state.coverImg2=d.coverImg2;
+    if(d.prizeDefs&&state.prizeDefs){
+      d.prizeDefs.forEach(function(pd){
+        const def=state.prizeDefs.find(function(x){return x.letter===pd.letter;});
+        if(def&&!def.img&&pd.img) def.img=pd.img;
+      });
+    }
+  }catch(e){}
 }
 
 /* MODE */
