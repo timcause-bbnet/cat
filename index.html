@@ -321,10 +321,22 @@ input:focus,select:focus{border-color:var(--accent2)}
   <div id="event-title" onclick="editTitle()">點擊輸入活動標題</div>
   <input id="title-input" type="text" placeholder="輸入活動標題" onblur="saveTitle()" onkeydown="if(event.key==='Enter')saveTitle()">
   <div id="event-subtitle">抽獎紀錄系統</div>
-  <br><img id="cover-img" src="" alt=""><br>
-  <div style="margin-top:10px;display:flex;align-items:center;gap:8px;justify-content:center;flex-wrap:wrap">
-    <input id="cover-url-inp" type="text" placeholder="封面圖片網址" style="padding:5px 10px;border-radius:7px;border:1px solid var(--border);background:rgba(255,255,255,.15);color:#fff;font-size:.8rem;width:260px;max-width:80vw" oninput="setCoverUrl(this.value)">
-    <button id="img-upload-btn" onclick="setCoverUrl(document.getElementById('cover-url-inp').value)" style="padding:5px 14px;background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.4);border-radius:20px;cursor:pointer;font-size:.78rem">套用</button>
+
+  <div style="margin-top:14px;display:flex;gap:14px;justify-content:center;flex-wrap:wrap;max-width:700px;margin-left:auto;margin-right:auto">
+    <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;min-width:140px">
+      <img id="cover-img-1" src="" alt="" style="display:none;width:100%;max-width:260px;height:160px;object-fit:cover;border-radius:10px;border:2px solid rgba(255,255,255,.3)">
+      <div style="display:flex;gap:6px;width:100%;max-width:260px">
+        <input id="cover-url-1" type="text" placeholder="左側圖片網址" style="flex:1;padding:5px 8px;border-radius:7px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.15);color:#fff;font-size:.75rem;min-width:0">
+        <button onclick="setCoverUrl(1)" style="padding:5px 10px;background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.4);border-radius:7px;cursor:pointer;font-size:.75rem">套用</button>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;min-width:140px">
+      <img id="cover-img-2" src="" alt="" style="display:none;width:100%;max-width:260px;height:160px;object-fit:cover;border-radius:10px;border:2px solid rgba(255,255,255,.3)">
+      <div style="display:flex;gap:6px;width:100%;max-width:260px">
+        <input id="cover-url-2" type="text" placeholder="右側圖片網址" style="flex:1;padding:5px 8px;border-radius:7px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.15);color:#fff;font-size:.75rem;min-width:0">
+        <button onclick="setCoverUrl(2)" style="padding:5px 10px;background:rgba(255,255,255,.2);color:#fff;border:1px solid rgba(255,255,255,.4);border-radius:7px;cursor:pointer;font-size:.75rem">套用</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -447,7 +459,7 @@ let sidCounter=0;
 
 function newSessionState(){
   return {
-    title:'',coverImg:'',mode:'alpha',
+    title:'',coverImg:'',coverImg2:'',mode:'alpha',
     prizeDefs:[],numPrizeDefs:[],
     magicNum:null,
     participants:[],records:[],
@@ -467,10 +479,12 @@ function save(){
   if(window._fbSet && window._fbReady===true){
     try{ window._fbSet(payload); }catch(e){ console.warn('Firebase save error',e); }
   }
-  // localStorage 完整備份（含圖片）
-  try{localStorage.setItem('lottery_v9',JSON.stringify(payload));}catch(e){
-    console.warn('localStorage 寫入失敗（可能被瀏覽器封鎖）',e);
+  // 多重備份：localStorage + sessionStorage
+  const payloadStr=JSON.stringify(payload);
+  try{localStorage.setItem('lottery_v9',payloadStr);}catch(e){
+    console.warn('localStorage 寫入失敗',e);
   }
+  try{sessionStorage.setItem('lottery_v9',payloadStr);}catch(e){}
   toast('已儲存');
 }
 
@@ -478,7 +492,10 @@ let _fbListening=false;
 function load(){
   // 先從 localStorage 載入（含圖片）
   try{
-    const raw=localStorage.getItem('lottery_v9');
+    // 優先讀 localStorage，備援 sessionStorage
+    let raw=null;
+    try{raw=localStorage.getItem('lottery_v9');}catch(e){}
+    if(!raw){try{raw=sessionStorage.getItem('lottery_v9');}catch(e){}}
     if(raw){
       const d=JSON.parse(raw);
       sessions=d.sessions||[];
@@ -486,7 +503,7 @@ function load(){
       sidCounter=d.sidCounter||0;
     }
   }catch(e){
-    console.warn('localStorage 讀取失敗，使用預設狀態', e);
+    console.warn('儲存讀取失敗，使用預設狀態', e);
     sessions=[];
   }
   if(!sessions||!sessions.length){
@@ -534,7 +551,9 @@ function load(){
       renderAll();
       updateFloatPool();
       // 更新本地備份
-      try{ localStorage.setItem('lottery_v9',JSON.stringify({sessions,currentSid,sidCounter})); }catch(e){}
+      const fbStr=JSON.stringify({sessions,currentSid,sidCounter});
+      try{localStorage.setItem('lottery_v9',fbStr);}catch(e){}
+      try{sessionStorage.setItem('lottery_v9',fbStr);}catch(e){}
     });
   }
 
@@ -571,6 +590,8 @@ function loadSession(sid){
     state=newSessionState();
   }
   // 確保所有欄位存在
+  if(!state.coverImg) state.coverImg='';
+  if(!state.coverImg2) state.coverImg2='';
   if(!state.participants) state.participants=[];
   if(!state.records) state.records=[];
   if(!state.prizeDefs) state.prizeDefs=[];
@@ -659,10 +680,13 @@ function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;'
 
 function renderAll(){
   if(state.title) document.getElementById('event-title').textContent=state.title;
-  if(state.coverImg&&state.coverImg.startsWith('http')){
-    const img=document.getElementById('cover-img');img.src=state.coverImg;img.style.display='inline-block';
-    const inp=document.getElementById('cover-url-inp');if(inp)inp.value=state.coverImg;
-  }
+  [['1',state.coverImg||''],['2',state.coverImg2||'']].forEach(function(pair){
+    var slot=pair[0],url=pair[1];
+    var img=document.getElementById('cover-img-'+slot);
+    var inp=document.getElementById('cover-url-'+slot);
+    if(inp) inp.value=url;
+    if(img){if(url&&url.startsWith('http')){img.src=url;img.style.display='block';}else{img.style.display='none';}}
+  });
   document.getElementById('btn-alpha').classList.toggle('active',state.mode==='alpha');
   document.getElementById('btn-num').classList.toggle('active',state.mode==='num');
   document.getElementById('alpha-setup').style.display=state.mode==='alpha'?'block':'none';
@@ -693,13 +717,19 @@ function saveTitle(){
   state.title=i.value.trim()||'點擊輸入活動標題';
   t.textContent=state.title;t.style.display='inline-block';i.style.display='none';save();
 }
-function setCoverUrl(url){
-  url=url.trim();
-  if(!url){state.coverImg='';document.getElementById('cover-img').style.display='none';save();return;}
-  state.coverImg=url;
-  const img=document.getElementById('cover-img');
-  img.src=url;img.style.display='inline-block';
-  img.onerror=()=>{img.style.display='none';toast('圖片網址無法載入');};
+function setCoverUrl(slot){
+  const url=(document.getElementById('cover-url-'+slot).value||'').trim();
+  if(slot===1){
+    state.coverImg=url;
+    const img=document.getElementById('cover-img-1');
+    if(url){img.src=url;img.style.display='block';img.onerror=function(){img.style.display='none';toast('左側圖片無法載入');};}
+    else{img.style.display='none';}
+  } else {
+    state.coverImg2=url;
+    const img=document.getElementById('cover-img-2');
+    if(url){img.src=url;img.style.display='block';img.onerror=function(){img.style.display='none';toast('右側圖片無法載入');};}
+    else{img.style.display='none';}
+  }
   save();
 }
 
@@ -759,8 +789,8 @@ function renderPrizeDefRows(){
       '<span class="prize-def-letter">'+def.letter+'</span>'+
       '<input class="prize-def-name" type="text" placeholder="獎項名稱" value="'+esc(def.name||'')+'" oninput="state.prizeDefs['+idx+'].name=this.value">'+
       '<input class="prize-def-qty" type="number" min="0" max="999" placeholder="數量" value="'+(def.qty||'')+'" oninput="state.prizeDefs['+idx+'].qty=parseInt(this.value)||0">'+
-      '<input class="prize-def-url" type="text" placeholder="圖片網址（選填）" value="'+esc(def.img&&def.img.startsWith('http')?def.img:'')+'" oninput="state.prizeDefs['+idx+'].img=this.value.trim()" style="flex:1.5;min-width:100px;font-size:.75rem;color:var(--text2)">'+
-      (hasImg?'<img class="prize-def-img-thumb" src="'+esc(def.img)+'" style="max-width:32px;max-height:32px">':'')+
+      '<input class="prize-def-url" type="text" placeholder="圖片網址（選填）" value="'+esc(def.img&&def.img.startsWith('http')?def.img:'')+'" oninput="state.prizeDefs['+idx+'].img=this.value.trim()" style="width:110px;font-size:.72rem;color:var(--text2)">'+
+      (hasImg?'<img class="prize-def-img-thumb" src="'+esc(def.img)+'" style="width:44px;height:44px;object-fit:cover;border-radius:5px;border:1px solid var(--border);flex-shrink:0">':'')+
       '<button class="prize-def-del" onclick="removePrizeRow('+idx+')">✕</button>';
     list.appendChild(row);
   });
@@ -771,8 +801,10 @@ function confirmPrizes(){
   document.querySelectorAll('#prize-def-list .prize-def-row').forEach((row,idx)=>{
     const nameInp=row.querySelector('.prize-def-name');
     const qtyInp=row.querySelector('.prize-def-qty');
+    const urlInp=row.querySelector('.prize-def-url');
     if(nameInp&&state.prizeDefs[idx]) state.prizeDefs[idx].name=nameInp.value;
     if(qtyInp&&state.prizeDefs[idx]) state.prizeDefs[idx].qty=parseInt(qtyInp.value)||0;
+    if(urlInp&&state.prizeDefs[idx]) state.prizeDefs[idx].img=urlInp.value.trim();
   });
   renderPoolDisplay();renderRecordsAll();save();
 }
@@ -827,8 +859,8 @@ function renderNumPrizeDefRows(){
       '<span class="range-sep">–</span>'+
       '<input class="num-range-to" type="number" placeholder="止" min="1" value="'+(def.to||'')+'" oninput="state.numPrizeDefs['+idx+'].to=parseInt(this.value)||this.value;renderNumPrizeDefRows()">'+
       '<input class="num-prize-name-inp" type="text" placeholder="獎項名稱" value="'+esc(def.name||'')+'" oninput="state.numPrizeDefs['+idx+'].name=this.value">'+
-      '<input class="prize-def-url" type="text" placeholder="圖片網址（選填）" value="'+esc(def.img&&def.img.startsWith('http')?def.img:'')+'" oninput="state.numPrizeDefs['+idx+'].img=this.value.trim()" style="flex:1.5;min-width:100px;font-size:.75rem;color:var(--text2)">'+
-      (hasImg?'<img class="prize-def-img-thumb" src="'+esc(def.img)+'" style="max-width:32px;max-height:32px">':'')+
+      '<input class="prize-def-url" type="text" placeholder="圖片網址（選填）" value="'+esc(def.img&&def.img.startsWith('http')?def.img:'')+'" oninput="state.numPrizeDefs['+idx+'].img=this.value.trim()" style="width:110px;font-size:.72rem;color:var(--text2)">'+
+      (hasImg?'<img class="prize-def-img-thumb" src="'+esc(def.img)+'" style="width:44px;height:44px;object-fit:cover;border-radius:5px;border:1px solid var(--border);flex-shrink:0">':'')+
       '<button class="prize-def-del" onclick="removeNumPrizeRow('+idx+')">✕</button>';
     list.appendChild(row);
   });
@@ -855,10 +887,12 @@ function confirmNumPrizes(){
     const fromInp=row.querySelector('.num-range-from');
     const toInp=row.querySelector('.num-range-to');
     const nameInp=row.querySelector('.num-prize-name-inp');
+    const urlInp=row.querySelector('.prize-def-url');
     if(state.numPrizeDefs[idx]){
       if(fromInp) state.numPrizeDefs[idx].from=parseInt(fromInp.value)||fromInp.value;
       if(toInp) state.numPrizeDefs[idx].to=parseInt(toInp.value)||toInp.value;
       if(nameInp) state.numPrizeDefs[idx].name=nameInp.value;
+      if(urlInp) state.numPrizeDefs[idx].img=urlInp.value.trim();
     }
   });
   renderNumPoolDisplay();renderRecordsAll();save();
