@@ -523,6 +523,16 @@ function load(){
   if(!currentSid) currentSid=sessions[0].sid;
   loadSession(currentSid);
 
+  // Firebase 就緒後讀取圖片
+  function tryLoadImgs(){
+    if(window._fbReady===true){
+      loadImgUrls();
+    } else if(window._fbReady!==false){
+      setTimeout(tryLoadImgs, 500);
+    }
+  }
+  setTimeout(tryLoadImgs, 800);
+
   // 等 Firebase 就緒後開始監聽
   function startListen(){
     if(_fbListening) return;
@@ -571,8 +581,6 @@ function load(){
         });
         pidCounter=state.participants.length?Math.max(...state.participants.map(p=>p.id)):0;
         ridCounter=state.records.length?Math.max(...state.records.map(r=>r.rid)):0;
-        // 補回本地儲存的圖片 URL
-        loadImgUrls();
       }
       renderSessionBar();
       renderAll();
@@ -825,9 +833,10 @@ function loadImgUrls(){
   if(!str){try{str=sessionStorage.getItem('lottery_imgs');}catch(e){}}
   if(str){try{applyImgData(JSON.parse(str));}catch(e){}}
 
-  // 2. 從 Firebase imgs 節點讀（跨裝置同步）
-  if(window._fbOnImgs){
-    window._fbOnImgs(function(d){
+  // 2. 從 Firebase imgs 節點讀一次（不持續監聽，避免重複觸發）
+  var getter = window._fbGetImgsOnce || window._fbOnImgs;
+  if(getter){
+    getter(function(d){
       applyImgData(d);
       // 更新本地備份
       const str2=JSON.stringify(d);
@@ -895,8 +904,9 @@ function renderPrizeDefRows(){
       '<span class="prize-def-letter">'+def.letter+'</span>'+
       '<input class="prize-def-name" type="text" placeholder="獎項名稱" value="'+esc(def.name||'')+'" oninput="state.prizeDefs['+idx+'].name=this.value">'+
       '<input class="prize-def-qty" type="number" min="0" max="999" placeholder="數量" value="'+(def.qty||'')+'" oninput="state.prizeDefs['+idx+'].qty=parseInt(this.value)||0">'+
-      '<input class="prize-def-url" type="text" placeholder="圖片網址（選填）" value="'+esc((def.img&&def.img!=='[img]'&&def.img.startsWith('http'))?def.img:'')+'" oninput="state.prizeDefs['+idx+'].img=this.value.trim()" style="width:110px;font-size:.72rem;color:var(--text2)">'+
-      (hasImg?'<img class="prize-def-img-thumb" src="'+esc(def.img)+'" style="width:44px;height:44px;object-fit:cover;border-radius:5px;border:1px solid var(--border);flex-shrink:0">':'')+
+      '<input class="prize-def-url" type="text" placeholder="圖片網址（選填）" value="'+esc(def.img&&def.img.startsWith("http")?def.img:"")+'" oninput="state.prizeDefs['+idx+'].img=this.value.trim()" style="width:90px;font-size:.72rem;color:var(--text2)">'+
+      '<button data-mode="alpha" data-idx="'+idx+'" onclick="applyPrizeImg(this.dataset.mode,parseInt(this.dataset.idx))" style="padding:3px 8px;background:var(--accent2);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.7rem;white-space:nowrap">套用</button>'+
+      (hasImg?'<img class="prize-def-img-thumb" src="'+esc(def.img)+'" style="width:40px;height:40px;object-fit:cover;border-radius:5px;border:1px solid var(--border);flex-shrink:0">':'')+
       '<button class="prize-def-del" onclick="removePrizeRow('+idx+')">✕</button>';
     list.appendChild(row);
   });
