@@ -471,7 +471,16 @@ function newSessionState(){
 let state=newSessionState();
 let pidCounter=0,ridCounter=0;
 
+function cleanImgPlaceholders(st){
+  // 清除 [img] 佔位符，改回空字串
+  if(st.coverImg==='[img]') st.coverImg='';
+  if(st.coverImg2==='[img]') st.coverImg2='';
+  if(st.prizeDefs) st.prizeDefs.forEach(function(d){if(d.img==='[img]')d.img='';});
+  if(st.numPrizeDefs) st.numPrizeDefs.forEach(function(d){if(d.img==='[img]')d.img='';});
+}
+
 function save(){
+  cleanImgPlaceholders(state);
   const sess=sessions.find(s=>s.sid===currentSid);
   if(sess) sess.state=JSON.parse(JSON.stringify(state));
   const payload={sessions,currentSid,sidCounter};
@@ -533,6 +542,7 @@ function load(){
         const prevNumPrizeDefs=state.numPrizeDefs?JSON.parse(JSON.stringify(state.numPrizeDefs)):[];
 
         state=JSON.parse(JSON.stringify(cur.state));
+        cleanImgPlaceholders(state);
         if(!state.participants)state.participants=[];
         if(!state.records)state.records=[];
         if(!state.prizeDefs)state.prizeDefs=[];
@@ -603,6 +613,7 @@ function loadSession(sid){
   const sess=sessions.find(s=>s.sid===sid)||sessions[0];
   if(sess && sess.state){
     state=JSON.parse(JSON.stringify(sess.state));
+    cleanImgPlaceholders(state);
   } else {
     state=newSessionState();
   }
@@ -700,7 +711,7 @@ function renderAll(){
   if(state.title) document.getElementById('event-title').textContent=state.title;
   [['1',state.coverImg||''],['2',state.coverImg2||'']].forEach(function(pair){
     var slot=pair[0],url=pair[1];
-    if(url==='[img]') url='';
+    if(!url||url==='[img]') url='';
     var img=document.getElementById('cover-img-'+slot);
     var inp=document.getElementById('cover-url-'+slot);
     if(inp) inp.value=url;
@@ -752,11 +763,11 @@ function setCoverUrl(slot){
 }
 
 function saveImgUrls(){
-  // 收集所有圖片 URL 存到獨立 key
   const imgData={
     coverImg:state.coverImg||'',
     coverImg2:state.coverImg2||'',
-    prizeDefs:(state.prizeDefs||[]).map(function(d){return{letter:d.letter,img:d.img||''};})
+    prizeDefs:(state.prizeDefs||[]).map(function(d){return{letter:d.letter,img:d.img||''};}),
+    numPrizeDefs:(state.numPrizeDefs||[]).map(function(d,i){return{idx:i,img:d.img||''};})
   };
   const str=JSON.stringify(imgData);
   try{localStorage.setItem('lottery_imgs',str);}catch(e){}
@@ -764,7 +775,7 @@ function saveImgUrls(){
 }
 
 function isValidImgUrl(url){
-  return url&&url!=='[img]'&&url.startsWith('http');
+  return !!(url&&url!=='[img]'&&url.startsWith('http'));
 }
 function loadImgUrls(){
   let str=null;
@@ -779,6 +790,11 @@ function loadImgUrls(){
       d.prizeDefs.forEach(function(pd){
         const def=state.prizeDefs.find(function(x){return x.letter===pd.letter;});
         if(def&&isValidImgUrl(pd.img)) def.img=pd.img;
+      });
+    }
+    if(d.numPrizeDefs&&state.numPrizeDefs){
+      d.numPrizeDefs.forEach(function(pd){
+        if(state.numPrizeDefs[pd.idx]&&isValidImgUrl(pd.img)) state.numPrizeDefs[pd.idx].img=pd.img;
       });
     }
   }catch(e){}
@@ -840,7 +856,7 @@ function renderPrizeDefRows(){
       '<span class="prize-def-letter">'+def.letter+'</span>'+
       '<input class="prize-def-name" type="text" placeholder="獎項名稱" value="'+esc(def.name||'')+'" oninput="state.prizeDefs['+idx+'].name=this.value">'+
       '<input class="prize-def-qty" type="number" min="0" max="999" placeholder="數量" value="'+(def.qty||'')+'" oninput="state.prizeDefs['+idx+'].qty=parseInt(this.value)||0">'+
-      '<input class="prize-def-url" type="text" placeholder="圖片網址（選填）" value="'+esc(def.img&&def.img.startsWith('http')?def.img:'')+'" oninput="state.prizeDefs['+idx+'].img=this.value.trim()" style="width:110px;font-size:.72rem;color:var(--text2)">'+
+      '<input class="prize-def-url" type="text" placeholder="圖片網址（選填）" value="'+esc((def.img&&def.img!=='[img]'&&def.img.startsWith('http'))?def.img:'')+'" oninput="state.prizeDefs['+idx+'].img=this.value.trim()" style="width:110px;font-size:.72rem;color:var(--text2)">'+
       (hasImg?'<img class="prize-def-img-thumb" src="'+esc(def.img)+'" style="width:44px;height:44px;object-fit:cover;border-radius:5px;border:1px solid var(--border);flex-shrink:0">':'')+
       '<button class="prize-def-del" onclick="removePrizeRow('+idx+')">✕</button>';
     list.appendChild(row);
@@ -910,7 +926,7 @@ function renderNumPrizeDefRows(){
       '<span class="range-sep">–</span>'+
       '<input class="num-range-to" type="number" placeholder="止" min="1" value="'+(def.to||'')+'" oninput="state.numPrizeDefs['+idx+'].to=parseInt(this.value)||this.value;renderNumPrizeDefRows()">'+
       '<input class="num-prize-name-inp" type="text" placeholder="獎項名稱" value="'+esc(def.name||'')+'" oninput="state.numPrizeDefs['+idx+'].name=this.value">'+
-      '<input class="prize-def-url" type="text" placeholder="圖片網址（選填）" value="'+esc(def.img&&def.img.startsWith('http')?def.img:'')+'" oninput="state.numPrizeDefs['+idx+'].img=this.value.trim()" style="width:110px;font-size:.72rem;color:var(--text2)">'+
+      '<input class="prize-def-url" type="text" placeholder="圖片網址（選填）" value="'+esc((def.img&&def.img!=='[img]'&&def.img.startsWith('http'))?def.img:'')+'" oninput="state.numPrizeDefs['+idx+'].img=this.value.trim()" style="width:110px;font-size:.72rem;color:var(--text2)">'+
       (hasImg?'<img class="prize-def-img-thumb" src="'+esc(def.img)+'" style="width:44px;height:44px;object-fit:cover;border-radius:5px;border:1px solid var(--border);flex-shrink:0">':'')+
       '<button class="prize-def-del" onclick="removeNumPrizeRow('+idx+')">✕</button>';
     list.appendChild(row);
@@ -946,7 +962,7 @@ function confirmNumPrizes(){
       if(urlInp) state.numPrizeDefs[idx].img=urlInp.value.trim();
     }
   });
-  renderNumPoolDisplay();renderRecordsAll();save();
+  renderNumPoolDisplay();renderRecordsAll();save();saveImgUrls();
 }
 function getNumUsedCounts(){
   const u={};
