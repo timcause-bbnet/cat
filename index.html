@@ -747,6 +747,26 @@ function saveTitle(){
   state.title=i.value.trim()||'點擊輸入活動標題';
   t.textContent=state.title;t.style.display='inline-block';i.style.display='none';save();
 }
+function applyPrizeImg(mode, idx){
+  // 找同一列的 prize-def-url input
+  var btn = event.currentTarget || event.target;
+  var row = btn.closest ? btn.closest('.prize-def-row,.num-prize-row') : null;
+  var inp = row ? row.querySelector('.prize-def-url') : document.getElementById((mode==='alpha'?'purl':'npurl')+idx);
+  if(!inp) return;
+  var url = inp.value.trim();
+  if(mode==='alpha'){
+    if(!state.prizeDefs[idx]) return;
+    state.prizeDefs[idx].img = url;
+    renderPrizeDefRows();
+  } else {
+    if(!state.numPrizeDefs[idx]) return;
+    state.numPrizeDefs[idx].img = url;
+    renderNumPrizeDefRows();
+  }
+  saveImgUrls();
+  save();
+}
+
 function setCoverUrl(slot){
   const url=(document.getElementById('cover-url-'+slot).value||'').trim();
   if(slot===1){
@@ -772,32 +792,51 @@ function saveImgUrls(){
   const str=JSON.stringify(imgData);
   try{localStorage.setItem('lottery_imgs',str);}catch(e){}
   try{sessionStorage.setItem('lottery_imgs',str);}catch(e){}
+  // 同步到 Firebase 獨立節點（跨裝置）
+  if(window._fbSetImgs && window._fbReady===true){
+    try{window._fbSetImgs(imgData);}catch(e){console.warn('Firebase imgs save error',e);}
+  }
 }
 
 function isValidImgUrl(url){
   return !!(url&&url!=='[img]'&&url.startsWith('http'));
 }
+function applyImgData(d){
+  if(!d) return;
+  if(isValidImgUrl(d.coverImg)) state.coverImg=d.coverImg;
+  if(isValidImgUrl(d.coverImg2)) state.coverImg2=d.coverImg2;
+  if(d.prizeDefs&&state.prizeDefs){
+    d.prizeDefs.forEach(function(pd){
+      const def=state.prizeDefs.find(function(x){return x.letter===pd.letter;});
+      if(def&&isValidImgUrl(pd.img)) def.img=pd.img;
+    });
+  }
+  if(d.numPrizeDefs&&state.numPrizeDefs){
+    d.numPrizeDefs.forEach(function(pd){
+      if(state.numPrizeDefs[pd.idx]&&isValidImgUrl(pd.img)) state.numPrizeDefs[pd.idx].img=pd.img;
+    });
+  }
+}
+
 function loadImgUrls(){
+  // 1. 先從本地讀
   let str=null;
   try{str=localStorage.getItem('lottery_imgs');}catch(e){}
   if(!str){try{str=sessionStorage.getItem('lottery_imgs');}catch(e){}}
-  if(!str) return;
-  try{
-    const d=JSON.parse(str);
-    if(isValidImgUrl(d.coverImg)) state.coverImg=d.coverImg;
-    if(isValidImgUrl(d.coverImg2)) state.coverImg2=d.coverImg2;
-    if(d.prizeDefs&&state.prizeDefs){
-      d.prizeDefs.forEach(function(pd){
-        const def=state.prizeDefs.find(function(x){return x.letter===pd.letter;});
-        if(def&&isValidImgUrl(pd.img)) def.img=pd.img;
-      });
-    }
-    if(d.numPrizeDefs&&state.numPrizeDefs){
-      d.numPrizeDefs.forEach(function(pd){
-        if(state.numPrizeDefs[pd.idx]&&isValidImgUrl(pd.img)) state.numPrizeDefs[pd.idx].img=pd.img;
-      });
-    }
-  }catch(e){}
+  if(str){try{applyImgData(JSON.parse(str));}catch(e){}}
+
+  // 2. 從 Firebase imgs 節點讀（跨裝置同步）
+  if(window._fbOnImgs){
+    window._fbOnImgs(function(d){
+      applyImgData(d);
+      // 更新本地備份
+      const str2=JSON.stringify(d);
+      try{localStorage.setItem('lottery_imgs',str2);}catch(e){}
+      try{sessionStorage.setItem('lottery_imgs',str2);}catch(e){}
+      // 重新渲染圖片
+      renderAll();
+    });
+  }
 }
 
 /* MODE */
@@ -926,7 +965,8 @@ function renderNumPrizeDefRows(){
       '<span class="range-sep">–</span>'+
       '<input class="num-range-to" type="number" placeholder="止" min="1" value="'+(def.to||'')+'" oninput="state.numPrizeDefs['+idx+'].to=parseInt(this.value)||this.value;renderNumPrizeDefRows()">'+
       '<input class="num-prize-name-inp" type="text" placeholder="獎項名稱" value="'+esc(def.name||'')+'" oninput="state.numPrizeDefs['+idx+'].name=this.value">'+
-      '<input class="prize-def-url" type="text" placeholder="圖片網址（選填）" value="'+esc((def.img&&def.img!=='[img]'&&def.img.startsWith('http'))?def.img:'')+'" oninput="state.numPrizeDefs['+idx+'].img=this.value.trim()" style="width:110px;font-size:.72rem;color:var(--text2)">'+
+      '<input class="prize-def-url" type="text" placeholder="圖片網址（選填）" value="'+esc((def.img&&def.img!=='[img]'&&def.img.startsWith('http'))?def.img:'')+'" oninput="state.numPrizeDefs['+idx+'].img=this.value.trim()" style="width:95px;font-size:.72rem;color:var(--text2)" id="npurl'+idx+'">'+
+      '<button data-mode="num" data-idx="'+idx+'" onclick="applyPrizeImg(this.dataset.mode,parseInt(this.dataset.idx))" style="padding:3px 8px;background:var(--accent2);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.7rem;white-space:nowrap">套用</button>'+
       (hasImg?'<img class="prize-def-img-thumb" src="'+esc(def.img)+'" style="width:44px;height:44px;object-fit:cover;border-radius:5px;border:1px solid var(--border);flex-shrink:0">':'')+
       '<button class="prize-def-del" onclick="removeNumPrizeRow('+idx+')">✕</button>';
     list.appendChild(row);
