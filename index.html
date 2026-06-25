@@ -526,17 +526,32 @@ function load(){
       sidCounter=merged.sidCounter||sidCounter;
       const cur=sessions.find(s=>s.sid===currentSid)||sessions[0];
       if(cur&&cur.state){
+        // 先保留本地的圖片 URL（Firebase 同步可能沒有）
+        const prevCoverImg=state.coverImg||'';
+        const prevCoverImg2=state.coverImg2||'';
+        const prevPrizeDefs=state.prizeDefs?JSON.parse(JSON.stringify(state.prizeDefs)):[];
+        const prevNumPrizeDefs=state.numPrizeDefs?JSON.parse(JSON.stringify(state.numPrizeDefs)):[];
+
         state=JSON.parse(JSON.stringify(cur.state));
         if(!state.participants)state.participants=[];
         if(!state.records)state.records=[];
         if(!state.prizeDefs)state.prizeDefs=[];
         if(!state.numPrizeDefs)state.numPrizeDefs=[];
+        if(!state.coverImg)state.coverImg=prevCoverImg;
+        if(!state.coverImg2)state.coverImg2=prevCoverImg2;
         if(state.magicNum===undefined)state.magicNum=null;
         if(state.activeAlphaRid===undefined)state.activeAlphaRid=null;
         if(state.activeLuckyRid===undefined)state.activeLuckyRid=null;
         if(state.round1Done===undefined)state.round1Done=false;
         if(state.gameOver===undefined)state.gameOver=false;
         if(state.gameOverRid===undefined)state.gameOverRid=null;
+        // 補回各獎項圖片 URL
+        state.prizeDefs.forEach((d,i)=>{
+          if(!d.img&&prevPrizeDefs[i]&&prevPrizeDefs[i].img) d.img=prevPrizeDefs[i].img;
+        });
+        state.numPrizeDefs.forEach((d,i)=>{
+          if(!d.img&&prevNumPrizeDefs[i]&&prevNumPrizeDefs[i].img) d.img=prevNumPrizeDefs[i].img;
+        });
         state.records.forEach(r=>{
           if(!r.results)r.results=[];
           if(!r.luckyNums)r.luckyNums=[];
